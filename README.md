@@ -1,42 +1,192 @@
 # 🛡️ VIGIL-AXIS: The Immutable Forensic OS
 
-**"Bridging the Gap Between Digital Crime Scenes and the Courtroom"**
+**Bridging the Gap Between Digital Crime Scenes and the Courtroom**
 
-[cite_start]VIGIL-AXIS is a premium, cinematic, and high-performance **Forensic Operating System** architected specifically for the **BSA 2026** (Bharatiya Sakshya Adhiniyam) legal landscape[cite: 6, 22]. [cite_start]It replaces traditional "human trust" with "mathematical proof" by automating the collection of volatile artifacts and notarizing their integrity on a decentralized ledger[cite: 39, 41].
+VIGIL-AXIS is a forensic operating system built to create an unbreakable **digital chain of custody** for cyber investigations. It automates volatile evidence collection, generates cryptographic fingerprints using **SHA-256**, and anchors proof of integrity on a blockchain to make forensic evidence more transparent, verifiable, and court-ready under the **BSA 2026** framework.
 
 ---
 
 ## 🚀 Vision
-[cite_start]To establish an unbreakable **"Digital Chain of Custody"** by automating evidence collection and anchoring integrity on a blockchain to prevent tampering[cite: 30, 31]. [cite_start]VIGIL-AXIS ensures that no cyber-criminal escapes due to a technicality in evidence handling[cite: 42].
 
-## ⚖️ The Problem (BSA 2026 Context)
-* [cite_start]**Fragile Chain of Custody:** Manual logging fails to prove that files remained untampered from the crime scene to the court[cite: 32].
-* [cite_start]**Volatile Data Loss:** Critical evidence like RAM strings is often lost during "dead forensics" (shutting down the PC)[cite: 33].
-* [cite_start]**Legal Inadmissibility:** Under BSA 2026, evidence is rejected without a technical **Section 63(4) Certificate of Integrity**[cite: 45, 58].
+To establish a **tamper-proof, legally defensible, and automated forensic pipeline** that transforms digital evidence from a matter of trust into a matter of proof.
 
-## ✨ Core Features
-* [cite_start]**Automated Triage:** Python/Bash scripts pull volatile artifacts (RAM, logs) before they are lost[cite: 59, 74, 76].
-* [cite_start]**Instant Fingerprinting:** Local **SHA-256 hashing** converts raw data into a digital "DNA" sample at the source[cite: 31, 80].
-* [cite_start]**Blockchain Notary:** Hashes are anchored to **Smart Contracts (Polygon/Aptos)**, creating a permanent, time-stamped record[cite: 82, 112].
-* [cite_start]**Admissibility Engine:** Auto-generates Section 63(4) Certificates, providing judges with a one-click verification portal[cite: 58, 85].
-
-## 🛠️ Technical Stack
-* [cite_start]**Frontend:** React 19 + Vite + React Three Fiber (R3F)[cite: 66, 200].
-* [cite_start]**UI/UX:** Tailwind CSS + Framer Motion (Tactical "Forensic Void" Aesthetic)[cite: 202, 205].
-* [cite_start]**State Management:** Zustand + TanStack Query[cite: 203].
-* [cite_start]**Backend:** Node.js + Python 3.12 (Artifact Engine)[cite: 174, 182].
-* [cite_start]**Blockchain:** Solidity + Hardhat (Polygon Amoy / Aptos Testnet)[cite: 190, 194].
-* [cite_start]**Storage:** PostgreSQL + IPFS (Decentralized Pinning)[cite: 184].
-
-## 🖥️ System Modules
-1. **CMD_BRIDGE (Mission Control):** A 3D spatial HUD for global forensic awareness and system health monitoring.
-2. **EVIDENCE_LAB (Quantum Centrifuge):** An interactive portal for "Zero-G" ingestion and holographic deconstruction of artifacts.
-3. **VERIFICATION_ENGINE:** A vertical "Deep-Diff" scanner identifying bit-level mismatches between live data and blockchain receipts.
-4. **IMMUTABLE_LEDGER:** A 3D scrolling timeline of blocks representing the cryptographic chain of custody.
-
-## 👥 Team: Sekiro
-* [cite_start]**Tanmay Verma** [cite: 7, 8]
-* [cite_start]**Kunal Verma** [cite: 9]
+VIGIL-AXIS is designed to help investigators, law-enforcement agencies, and judicial stakeholders preserve digital evidence with integrity from seizure to courtroom presentation.
 
 ---
-**Automated. Verifiable. [cite_start]BSA 2026 Compliant.** [cite: 6]
+
+## ⚖️ Problem Statement
+
+Digital forensics still suffers from major trust and admissibility gaps:
+
+- **Fragile Chain of Custody**  
+  Manual evidence handling and logging make it difficult to prove that files remained unchanged from collection to court.
+
+- **Volatile Data Loss**  
+  Critical live artifacts such as RAM strings, logs, and active process data are often lost during traditional dead forensics.
+
+- **Legal Inadmissibility**  
+  Under the **Bharatiya Sakshya Adhiniyam (BSA) 2026**, electronic evidence needs technical integrity support such as a **Section 63(4) certificate**, which most existing tools do not generate automatically.
+
+- **Lack of Transparent Audit Trails**  
+  Many existing forensic systems store logs in centralized databases, which can be altered, deleted, or challenged.
+
+---
+
+## 💡 Solution
+
+VIGIL-AXIS combines:
+
+- **Automated triage**
+- **Cryptographic hashing**
+- **Blockchain notarization**
+- **Legal compliance automation**
+
+This creates a **Forensic-on-Chain** workflow where each artifact is collected, hashed, logged, and made independently verifiable.
+
+---
+
+## ✨ Core Features
+
+### 1. Automated Triage
+Python/Bash-based forensic scripts capture volatile system artifacts such as:
+
+- RAM traces
+- System logs
+- Live forensic metadata
+
+This reduces the risk of losing evidence before acquisition.
+
+### 2. SHA-256 Fingerprinting
+Every collected artifact is hashed locally using **SHA-256**, creating a unique digital fingerprint that acts like evidence DNA.
+
+### 3. Blockchain Notary
+The generated hashes are recorded through **smart contracts** on blockchain networks such as:
+
+- Polygon Amoy
+- Aptos Testnet
+
+This creates a permanent, timestamped, tamper-resistant audit trail.
+
+### 4. BSA 2026 Compliance Engine
+VIGIL-AXIS is built around legal admissibility and can support automated generation of **Section 63(4) integrity certificates** for courtroom use.
+
+### 5. Verification Layer
+Evidence can be validated against the blockchain record and presented through a simple **Verified / Tampered** model for investigators, auditors, and judges.
+
+---
+
+## 🔄 Forensic Lifecycle
+
+VIGIL-AXIS follows a four-step evidence workflow:
+
+1. **Extraction**  
+   Automated scripts collect volatile forensic artifacts.
+
+2. **Notarization**  
+   SHA-256 hashing generates a unique digital fingerprint.
+
+3. **Immutability**  
+   The hash is anchored to a blockchain smart contract.
+
+4. **Admissibility**  
+   A compliance-ready integrity record supports legal scrutiny.
+
+---
+
+## 🧠 Why VIGIL-AXIS?
+
+- Replaces **human trust** with **mathematical proof**
+- Secures chain of custody using **decentralized ledgers**
+- Minimizes evidence loss with **zero-latency triage**
+- Supports **BSA 2026-first** forensic compliance
+- Bridges the gap between **technical investigation** and **judicial verification**
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+- React 18 + Vite
+- Tailwind CSS
+- TanStack Query
+- Framer Motion
+- Recharts
+
+### Backend
+- Node.js
+- Python 3.12
+- PostgreSQL
+- IPFS
+- Socket.io
+- Swagger / OpenAPI
+
+### Blockchain
+- Solidity
+- Hardhat / Truffle
+- Polygon Amoy / Aptos Testnet
+- Ethers.js / Web3.js
+
+### Security & Forensics
+- SHA-256 Hashing
+- JWT + 2FA
+- Python/Bash Triage Scripts
+- Forensic tooling integration
+
+---
+
+## 👥 Target Users
+
+VIGIL-AXIS is designed for:
+
+- Cyber forensic investigators
+- Law Enforcement Agencies (LEAs)
+- Incident response teams
+- Judicial auditors
+- Compliance and legal verification teams
+
+---
+
+## 📈 Value Proposition
+
+VIGIL-AXIS offers a unified platform for:
+
+- Automated forensic evidence acquisition
+- Immutable integrity assurance
+- Blockchain-backed custody verification
+- Legal admissibility support
+- Transparent auditability for court proceedings
+
+---
+
+## 🌍 Innovation Highlights
+
+- **Deterministic Integrity** — Cryptographic certainty over manual assurance
+- **On-Chain Notary** — Immutable evidence blueprint
+- **Zero-Trust Validation** — Dashboard-based verification against distributed records
+- **Hybrid Forensic-as-a-Service** — Scalable and cost-efficient deployment model
+- **Native Legal Alignment** — Built specifically for the Indian BSA 2026 landscape
+
+---
+
+## 🔐 Expected Impact
+
+VIGIL-AXIS aims to transform digital forensics from a process that can be challenged on technicalities into one backed by a verifiable, permanent, and court-defensible chain of custody.
+
+---
+
+## 👨‍💻 Team Sekiro
+
+- **Tanmay Verma**
+- **Kunal Verma**
+
+---
+
+## 🏷️ Tagline
+
+**Automated. Verifiable. BSA 2026 Compliant.**
+
+---
+
+## 📌 Note
+
+This project is a compliance-first forensic innovation focused on evidence integrity, chain-of-custody assurance, and legal readiness for the next generation of digital investigations.
