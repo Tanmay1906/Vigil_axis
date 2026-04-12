@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useMemo } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { StatusHeader } from './StatusHeader'
 import { MainScene } from '../3d/MainScene'
@@ -8,7 +9,29 @@ interface OSShellProps {
 }
 
 export function OSShell({ children }: OSShellProps) {
-  const [activeModule, setActiveModule] = useState('dashboard')
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  const activeModule = useMemo(() => {
+    if (location.pathname.startsWith('/evidence')) return 'evidence'
+    if (location.pathname.startsWith('/verification')) return 'verification'
+    if (location.pathname.startsWith('/ledger')) return 'ledger'
+    return 'dashboard'
+  }, [location.pathname])
+
+  const setActiveModule = (module: string) => {
+    const moduleRoute: Record<string, string> = {
+      dashboard: '/dashboard',
+      evidence: '/evidence',
+      verification: '/verification',
+      ledger: '/ledger'
+    }
+
+    const route = moduleRoute[module] ?? '/dashboard'
+    if (route !== location.pathname) {
+      navigate(route)
+    }
+  }
 
   return (
     <div className="flex h-screen w-screen overflow-hidden text-white font-sans bg-transparent relative">
@@ -45,9 +68,7 @@ export function OSShell({ children }: OSShellProps) {
           
           {/* Global Legal Footer */}
           <footer className="w-full flex justify-center mt-auto pt-6 pb-2">
-            <div className="text-[10px] font-mono tracking-[0.2em] text-vigil-cyan animate-dim-pulse border-t border-vigil-cyan/10 pt-2 px-8">
-              BSA_2026_COMPLIANT // SEC_63(4)_VERIFIED
-            </div>
+            
           </footer>
         </main>
       </div>
