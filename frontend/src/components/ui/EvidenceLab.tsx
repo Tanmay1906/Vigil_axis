@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { useForensics } from '../../hooks/useForensics'
 import { motion, AnimatePresence } from 'framer-motion'
 import { UploadCloud, Terminal } from 'lucide-react'
@@ -7,14 +7,44 @@ export function EvidenceLab() {
   const { simulateIngestion, currentHash, progress, isScanning } = useForensics()
   const [dragActive, setDragActive] = useState(false)
   const [fileName, setFileName] = useState<string>('')
+  const [investigatorName, setInvestigatorName] = useState('')
+  const [forensicEvidenceName, setForensicEvidenceName] = useState('')
+  const [detailsSaved, setDetailsSaved] = useState(false)
+  const [detailsError, setDetailsError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const processFile = async (file: File) => {
+    setFileName(file.name)
+    setForensicEvidenceName(file.name)
+    setDetailsSaved(false)
+    setDetailsError('')
+    await simulateIngestion(file.name)
+  }
 
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     setDragActive(false)
     if (!e.dataTransfer.files || e.dataTransfer.files.length === 0) return
     const file = e.dataTransfer.files[0]
-    setFileName(file.name)
-    await simulateIngestion(file.name)
+    await processFile(file)
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return
+    const file = e.target.files[0]
+    await processFile(file)
+    e.target.value = ''
+  }
+
+  const handleSaveDetails = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!investigatorName.trim() || !forensicEvidenceName.trim()) {
+      setDetailsError('Investigator name and forensic evidence name are required.')
+      return
+    }
+
+    setDetailsError('')
+    setDetailsSaved(true)
   }
 
   return (
@@ -27,10 +57,22 @@ export function EvidenceLab() {
         className={`flex-1 relative flex flex-col items-center justify-center rounded-2xl border border-dashed transition-all duration-300 ${
           dragActive ? 'border-vigil-cyan bg-vigil-cyan/10 scale-[1.02]' : 'border-vigil-cyan/30 bg-black/20 hover:border-vigil-cyan/50 hover:bg-black/40'
         }`}
+        onClick={() => {
+          if (!fileName) {
+            fileInputRef.current?.click()
+          }
+        }}
         onDragOver={(e) => { e.preventDefault(); setDragActive(true) }}
         onDragLeave={(e) => { e.preventDefault(); setDragActive(false) }}
         onDrop={handleDrop}
       >
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+
         <AnimatePresence mode="wait">
           {!isScanning && progress === 0 ? (
             <motion.div 
@@ -46,7 +88,7 @@ export function EvidenceLab() {
               <div className="font-mono tracking-widest text-lg text-vigil-cyan">QUANTUM CENTRIFUGE</div>
               <div className="text-xs opacity-50 font-mono text-center">
                 INITIALIZE DECONSTRUCTION<br/>
-                [ DROP FILES HERE ]
+                [ DROP OR CLICK TO SELECT ANY DOCUMENT ]
               </div>
             </motion.div>
           ) : (
@@ -95,6 +137,54 @@ export function EvidenceLab() {
                   )}
                 </div>
               </div>
+
+              <form onSubmit={handleSaveDetails} className="rounded-2xl border border-vigil-cyan/20 bg-black/50 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-mono tracking-[0.18em] text-vigil-cyan">EVIDENCE DETAILS</h3>
+                  {detailsSaved && <span className="text-[10px] font-mono text-emerald-300">DETAILS SAVED</span>}
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div>
+                    <label htmlFor="investigatorName" className="mb-1 block text-[10px] font-mono uppercase tracking-[0.12em] text-cyan-200/80">
+                      Investigator Name
+                    </label>
+                    <input
+                      id="investigatorName"
+                      type="text"
+                      value={investigatorName}
+                      onChange={(event) => setInvestigatorName(event.target.value)}
+                      placeholder="e.g. R. Mehta"
+                      className="w-full rounded-lg border border-vigil-cyan/20 bg-slate-900/80 px-3 py-2 text-xs text-slate-100 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="forensicEvidenceName" className="mb-1 block text-[10px] font-mono uppercase tracking-[0.12em] text-cyan-200/80">
+                      Forensic Evidence Name
+                    </label>
+                    <input
+                      id="forensicEvidenceName"
+                      type="text"
+                      value={forensicEvidenceName}
+                      onChange={(event) => setForensicEvidenceName(event.target.value)}
+                      placeholder="e.g. Laptop Image - Case 42"
+                      className="w-full rounded-lg border border-vigil-cyan/20 bg-slate-900/80 px-3 py-2 text-xs text-slate-100 outline-none"
+                    />
+                  </div>
+                </div>
+
+                {detailsError && (
+                  <p className="text-[10px] font-mono text-rose-300">{detailsError}</p>
+                )}
+
+                <button
+                  type="submit"
+                  className="w-full rounded-xl bg-vigil-cyan/90 px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-slate-950 transition hover:bg-vigil-cyan"
+                >
+                  Save Evidence Details
+                </button>
+              </form>
             </motion.div>
           )}
         </AnimatePresence>
