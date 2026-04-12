@@ -1,174 +1,255 @@
-import { useEffect, useRef, useState } from 'react'
-import { useVigilStore } from '../../store/useVigilStore'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useEffect, useMemo, useState } from 'react'
+import { motion } from 'framer-motion'
+
+type EvidenceStatus = 'verified' | 'pending' | 'tampered'
+
+type Evidence = {
+  id: string
+  name: string
+  hash: string
+  status: EvidenceStatus
+  timestamp: string
+  source: string
+  size: string
+}
+
+const mockEvidence: Evidence[] = [
+  {
+    id: 'EV-001',
+    name: 'Disk_Image_A01.dd',
+    hash: 'A9F23C71D612...91B',
+    status: 'verified',
+    timestamp: '2026-04-12 10:22',
+    source: 'Workstation-07',
+    size: '84.2 GB'
+  },
+  {
+    id: 'EV-002',
+    name: 'Mobile_Dump_X2.bin',
+    hash: '77BC12811FAE...FFE',
+    status: 'tampered',
+    timestamp: '2026-04-12 09:10',
+    source: 'Android Device',
+    size: '12.6 GB'
+  },
+  {
+    id: 'EV-003',
+    name: 'Log_Archive.zip',
+    hash: '98AA11C04DE8...223',
+    status: 'pending',
+    timestamp: '2026-04-11 18:45',
+    source: 'Server Cluster B',
+    size: '2.1 GB'
+  },
+  {
+    id: 'EV-004',
+    name: 'Registry_Snapshot.hiv',
+    hash: 'B310CAE82FD5...A90',
+    status: 'verified',
+    timestamp: '2026-04-11 16:02',
+    source: 'Endpoint-113',
+    size: '940 MB'
+  }
+]
+
+const custodyEvents = [
+  'EV-001 collected by SOC Operator and sealed with SHA-256',
+  'EV-002 hash mismatch detected during cross-node verification',
+  'EV-003 queued for triage validation and time-stamp notarization',
+  'EV-004 archived under legal hold profile with retention lock'
+]
 
 export function Dashboard() {
-  const systemHealth = useVigilStore(state => state.systemHealth)
-  const evidenceLog = useVigilStore(state => state.evidenceLog)
-  const logEndRef = useRef<HTMLDivElement>(null)
-  
-  // Tactical HUD Simulation Data
-  const [ramFeeds, setRamFeeds] = useState<string[]>([])
-  
-  // Auto-scroll logic
-  useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [evidenceLog])
+  const [evidence, setEvidence] = useState<Evidence[]>([])
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const nodes = ['DEL', 'MUM', 'BEN', 'KOL']
-      const node = nodes[Math.floor(Math.random() * nodes.length)]
-      const seq = Math.floor(Math.random() * 99).toString().padStart(2, '0')
-      const ptr = '0x' + Math.random().toString(16).slice(2, 10).toUpperCase()
-      const newFeed = `[${node}_NODE] 14:22:${seq} - CHAIN_SYNC: Verifying ${ptr}...`
-      
-      setRamFeeds(prev => {
-        const next = [...prev, newFeed]
-        if (next.length > 20) return next.slice(next.length - 20)
-        return next
-      })
-    }, 400)
-    return () => clearInterval(interval)
+    setEvidence(mockEvidence)
   }, [])
 
+  const stats = useMemo(() => {
+    const verified = evidence.filter(item => item.status === 'verified').length
+    const tampered = evidence.filter(item => item.status === 'tampered').length
+    const pending = evidence.filter(item => item.status === 'pending').length
+
+    return {
+      total: evidence.length,
+      verified,
+      tampered,
+      pending,
+      integrityRate: evidence.length > 0 ? Math.round((verified / evidence.length) * 100) : 0
+    }
+  }, [evidence])
+
   return (
-    <div className="h-full w-full pointer-events-none relative z-10 font-sans p-6 text-white overflow-hidden">
-      
-      {/* CRT Grid / Scanline overlay overall */}
-      <div className="absolute inset-0 z-[-1] opacity-10 bg-[linear-gradient(rgba(255,255,255,0)_50%,rgba(0,0,0,1)_50%)] bg-[length:100%_4px] mix-blend-overlay"></div>
-      <div className="absolute inset-0 z-[-1] opacity-20 bg-[radial-gradient(circle_at_center,theme(colors.black/0),theme(colors.black)_120%)]"></div>
-
-      {/* Grid Layout Container */}
-      <div className="grid grid-cols-12 h-full gap-4">
-        
-        {/* LEFT COLUMN */}
-        <div className="col-span-3 flex flex-col space-y-6 pointer-events-auto h-full justify-start pb-10">
-          
-          <h1 className="text-3xl font-bold tracking-widest text-[#9ae9f9] drop-shadow-[0_0_15px_rgba(0,242,255,0.7)] pt-4 uppercase">
-            VIGIL-AXIS CMD_BRIDGE
-          </h1>
-
-          {/* Active Investigations */}
-          <GlassPanel className="h-64 flex flex-col">
-            <h2 className="text-xs tracking-widest text-[#00f2ff]/80 uppercase px-4 pt-4 mb-2">Active Investigations: 14</h2>
-            <div className="text-[10px] text-gray-400 mb-2 px-4 uppercase">Prioritized Case IDs</div>
-            <div className="flex-1 overflow-auto px-4 pb-4 space-y-1">
-               {['#BX-990-ALPHA', '#RX-202-OMEGA', '#NC-404-EPSILON', '#VX-900-DELTA', '#TX-101-SIGMA'].map((caseId, idx) => (
-                  <div key={idx} className={`text-xs py-2 px-3 border border-[#00f2ff]/20 bg-[#00f2ff]/5 hover:bg-[#00f2ff]/20 cursor-pointer transition-colors ${idx === 1 ? 'border-[#00f2ff]/60 bg-[#00f2ff]/10 text-white' : 'text-[#00f2ff]/70'}`}>
-                    Prioritized Case ID {caseId}
-                  </div>
-               ))}
+    <div className="min-h-screen rounded-3xl border border-cyan-400/20 bg-[linear-gradient(140deg,#030712_0%,#0b1220_55%,#111827_100%)] p-6 text-slate-100 shadow-[0_0_80px_rgba(8,145,178,0.12)]">
+      <div className="mx-auto max-w-7xl space-y-5 font-['Space_Grotesk',ui-sans-serif,system-ui]">
+        <header className="rounded-3xl border border-cyan-400/20 bg-slate-900/70 p-6 shadow-[0_18px_50px_-30px_rgba(8,145,178,0.45)] backdrop-blur">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/80">Forensic OS</p>
+              <h1 className="mt-2 text-3xl font-semibold text-white">Digital Evidence Integrity Desk</h1>
+              <p className="mt-2 max-w-3xl text-sm text-slate-300">
+                Centralized dashboard for ingestion, cryptographic hashing, custody tracking, and tamper detection across digital evidence artifacts.
+              </p>
             </div>
-          </GlassPanel>
+            <div className="flex gap-2">
+              <button className="rounded-xl border border-cyan-400/30 bg-slate-800/80 px-4 py-2 text-sm font-medium text-slate-200 hover:bg-slate-700/80">
+                New Case
+              </button>
+              <button className="rounded-xl bg-cyan-500/90 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-cyan-400">
+                Ingest Evidence
+              </button>
+            </div>
+          </div>
+        </header>
 
-          {/* System Entropy */}
-          <GlassPanel className="h-40 flex flex-col relative w-4/5">
-            <h2 className="text-xs font-bold tracking-widest text-white px-4 pt-4 uppercase">SYSTEM ENTROPY</h2>
-            <div className="flex items-end flex-1 px-4 pb-4">
-              <div className="w-full h-16 relative border-l border-b border-[#00f2ff]/30">
-                 {/* Decorative Line Chart */}
-                 <svg className="w-full h-full absolute inset-0 text-[#00f2ff]" preserveAspectRatio="none" viewBox="0 0 100 100">
-                    <path d="M0,80 L10,75 L20,90 L30,60 L40,65 L45,20 L50,80 L60,70 L70,50 L80,60 L90,85 L100,50" fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" className="drop-shadow-[0_0_5px_rgba(0,242,255,0.8)]" />
-                    <line x1="0" y1="20" x2="100" y2="20" stroke="#FF0055" strokeWidth="1" strokeDasharray="4 4" opacity="0.5" />
-                 </svg>
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricCard title="Total Evidence" value={String(stats.total)} hint="records" tone="slate" />
+          <MetricCard title="Verified" value={String(stats.verified)} hint="integrity passed" tone="emerald" />
+          <MetricCard title="Pending" value={String(stats.pending)} hint="awaiting hash check" tone="amber" />
+          <MetricCard title="Tampered" value={String(stats.tampered)} hint="requires escalation" tone="rose" />
+        </section>
+
+        <section className="space-y-4">
+          <div>
+            <div className="rounded-3xl border border-cyan-400/20 bg-slate-950/95 p-5 shadow-[0_18px_50px_-30px_rgba(8,145,178,0.45)]">
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-cyan-300/80">Evidence Register</h2>
+                <span className="rounded-lg border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 text-xs text-cyan-200">Immutable Hash Logging Enabled</span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[760px] text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-700 text-left text-xs uppercase tracking-[0.1em] text-slate-400">
+                      <th className="py-2 pr-3 font-medium">ID</th>
+                      <th className="py-2 pr-3 font-medium">Artifact</th>
+                      <th className="py-2 pr-3 font-medium">Source</th>
+                      <th className="py-2 pr-3 font-medium">Size</th>
+                      <th className="py-2 pr-3 font-medium">Hash</th>
+                      <th className="py-2 pr-3 font-medium">Status</th>
+                      <th className="py-2 font-medium">Timestamp</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {evidence.map(item => (
+                      <tr key={item.id} className="border-b border-slate-800">
+                        <td className="py-3 pr-3 font-medium text-slate-100">{item.id}</td>
+                        <td className="py-3 pr-3 text-slate-100">{item.name}</td>
+                        <td className="py-3 pr-3 text-slate-300">{item.source}</td>
+                        <td className="py-3 pr-3 text-slate-300">{item.size}</td>
+                        <td className="py-3 pr-3 font-mono text-xs text-slate-400">{item.hash}</td>
+                        <td className="py-3 pr-3">
+                          <StatusBadge status={item.status} />
+                        </td>
+                        <td className="py-3 text-slate-400">{item.timestamp}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-            <div className="flex justify-between text-[10px] px-4 pb-3">
-               <div>Current Entropy: <span className="text-white font-bold text-xs pl-1">14.3</span></div>
-               <div>Threshold: <span className="text-[#FF0055] font-bold text-xs pl-1">20.0</span></div>
-            </div>
-          </GlassPanel>
-
-          {/* Network Latency */}
-          <GlassPanel className="flex flex-col h-36 w-3/4">
-            <h2 className="text-xs tracking-widest text-[#00f2ff] px-4 pt-3 uppercase">NETWORK LATENCY</h2>
-            <div className="text-[9px] text-[#00f2ff]/60 px-4 mb-2">Global network status</div>
-            <div className="flex-1 px-4 relative flex justify-center items-center opacity-70 border-b border-[#00f2ff]/20">
-               {/* Crude World Map SVG approximation */}
-               <svg viewBox="0 0 100 50" className="w-full h-12 text-[#00f2ff]/50" fill="currentColor">
-                  <path d="M10,20 Q15,10 25,15 T40,25 Q45,20 50,30 T75,10 Q85,5 95,20 T80,45 Q60,35 45,40 T30,30 Z" opacity="0.2"/>
-                  <circle cx="20" cy="18" r="1.5" fill="#00f2ff" />
-                  <circle cx="45" cy="25" r="1.5" fill="#00f2ff" />
-                  <circle cx="75" cy="15" r="1.5" fill="#00f2ff" />
-               </svg>
-            </div>
-            <div className="text-[10px] px-4 py-3 flex text-[#00f2ff]">
-              Avg Latency: <span className="text-white font-bold text-xs pl-2">45ms</span>
-            </div>
-          </GlassPanel>
-
-        </div>
-
-        {/* CENTER COLUMN (spacer for 3D view) */}
-        <div className="col-span-4 lg:col-span-6 pointer-events-none" />
-
-        {/* RIGHT COLUMN */}
-        <div className="col-span-5 lg:col-span-3 flex flex-col space-y-6 pointer-events-auto h-full justify-between pb-10">
-          
-          <div className="flex flex-col items-end pt-8">
-            {/* System Health Pulse */}
-            <GlassPanel className="h-28 w-full">
-              <h2 className="text-xs tracking-widest text-white px-4 pt-3 uppercase">SYSTEM HEALTH PULSE</h2>
-              <div className="relative h-12 w-full px-4 overflow-hidden my-1">
-                 <svg className="w-full h-full text-[#00f2ff]" preserveAspectRatio="none" viewBox="0 0 200 40">
-                    <path d="M0,20 L50,20 L55,5 L60,35 L65,15 L70,20 L150,20 L155,5 L160,35 L165,15 L170,20 L200,20" fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" className="drop-shadow-[0_0_5px_rgba(0,242,255,0.8)] pulse-anim" />
-                 </svg>
-              </div>
-              <div className="flex justify-between px-4 pb-3">
-                 <div className="text-[10px] text-[#00f2ff]">Node Integrity: <span className="text-white font-bold text-xs">98.7%</span></div>
-                 <div className="text-[10px] text-[#00f2ff]">Session Uptime: <span className="text-white font-bold text-xs">14D 03H 22M</span></div>
-              </div>
-            </GlassPanel>
           </div>
 
-          <div className="flex-1" />
-
-          {/* Live Artifact Ticker */}
-          <GlassPanel className="h-44 flex flex-col w-[110%] -ml-10">
-            <div className="p-3 bg-black/40 border-b border-[#00f2ff]/20 text-[10px] tracking-widest text-white/90">
-              LIVE ARTIFACT TICKER
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+            <div className="xl:col-span-6">
+              <Panel title="Chain Of Custody" className="h-full">
+                <div className="space-y-2 text-sm text-slate-300">
+                  {custodyEvents.map(event => (
+                    <div key={event} className="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+                      {event}
+                    </div>
+                  ))}
+                </div>
+              </Panel>
             </div>
-            <div className="flex-1 overflow-y-auto p-3 space-y-2 font-mono text-[9px] tracking-wider relative flex flex-col justify-end">
-              <AnimatePresence mode="popLayout">
-                {ramFeeds.slice(-5).map((feed, i) => (
+
+            <div className="xl:col-span-3">
+              <Panel title="Integrity Pulse" className="h-full">
+              <div className="space-y-3">
+                <div className="flex items-end justify-between">
+                  <p className="text-4xl font-semibold text-white">{stats.integrityRate}%</p>
+                  <p className="text-xs text-slate-400">hash success rate</p>
+                </div>
+                <div className="h-3 w-full overflow-hidden rounded-full bg-slate-800">
                   <motion.div
-                    key={feed + i}
-                    layout
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="text-[#00f2ff]/80 flex"
-                  >
-                    <span className="w-1 bg-[#00f2ff] mr-2 shadow-[0_0_5px_#00f2ff]" />
-                    {feed}
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+                    initial={{ width: 0 }}
+                    animate={{ width: `${stats.integrityRate}%` }}
+                    transition={{ duration: 0.45 }}
+                    className={`h-full rounded-full ${stats.integrityRate > 85 ? 'bg-emerald-600' : stats.integrityRate > 60 ? 'bg-amber-500' : 'bg-rose-600'}`}
+                  />
+                </div>
+              </div>
+            </Panel>
             </div>
-          </GlassPanel>
 
-        </div>
-
+            <div className="xl:col-span-3">
+              <Panel title="Active Alert" className="h-full">
+              <div className={`rounded-xl border p-3 text-sm ${stats.tampered > 0 ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                {stats.tampered > 0
+                  ? `${stats.tampered} artifact(s) failed hash verification and require analyst review.`
+                  : 'No tamper alerts detected in current scan window.'}
+              </div>
+            </Panel>
+            </div>
+          </div>
+        </section>
       </div>
-
-      {/* FOOTER */}
-      <div className="absolute bottom-4 left-0 w-full text-center pointer-events-auto">
-         <div className="inline-block border-t border-[#00f2ff]/30 pt-2 text-[10px] tracking-[0.2em] font-mono text-[#00f2ff]/70">
-            COMPLIANCE_MODE: <span className="text-[#00f2ff] font-bold">BSA_2026_ACTIVE</span> // ON-CHAIN_VERIFICATION: <span className="text-[#00f2ff] font-bold">SECURE</span>
-         </div>
-      </div>
-
     </div>
   )
 }
 
-function GlassPanel({ children, className = '' }: { children: React.ReactNode, className?: string }) {
+export default Dashboard
+
+function MetricCard({
+  title,
+  value,
+  hint,
+  tone
+}: {
+  title: string
+  value: string
+  hint: string
+  tone: 'slate' | 'emerald' | 'amber' | 'rose'
+}) {
+  const tones = {
+    slate: 'bg-slate-900/70 text-slate-100 border-slate-700',
+    emerald: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
+    amber: 'bg-amber-500/10 text-amber-300 border-amber-500/30',
+    rose: 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+  }
+
   return (
-    <div className={`border border-[#00f2ff]/20 bg-gradient-to-br from-[#021014]/80 to-[#001f26]/80 backdrop-blur-md rounded shadow-[0_0_30px_rgba(0,0,0,0.8)] shadow-inner drop-shadow-[0_0_10px_rgba(0,100,150,0.1)] relative overflow-hidden ${className}`}>
-      {/* Glossy top edge highlight */}
-      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#00f2ff]/40 to-transparent"></div>
+    <motion.div
+      whileHover={{ y: -2 }}
+      className={`rounded-2xl border p-4 shadow-sm ${tones[tone]}`}
+    >
+      <p className="text-xs uppercase tracking-[0.14em]">{title}</p>
+      <p className="mt-2 text-3xl font-semibold">{value}</p>
+      <p className="text-xs opacity-80">{hint}</p>
+    </motion.div>
+  )
+}
+
+function Panel({ title, children, className = '' }: { title: string, children: React.ReactNode, className?: string }) {
+  return (
+    <div className={`rounded-3xl border border-cyan-400/20 bg-slate-900/75 p-5 shadow-[0_18px_50px_-30px_rgba(8,145,178,0.45)] ${className}`}>
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.16em] text-cyan-300/80">{title}</h3>
       {children}
     </div>
+  )
+}
+
+function StatusBadge({ status }: { status: EvidenceStatus }) {
+  const classes = {
+    verified: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    tampered: 'border-rose-200 bg-rose-50 text-rose-700',
+    pending: 'border-amber-200 bg-amber-50 text-amber-700'
+  }
+
+  return (
+    <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-semibold uppercase tracking-[0.08em] ${classes[status]}`}>
+      {status}
+    </span>
   )
 }

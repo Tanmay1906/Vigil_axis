@@ -12,7 +12,7 @@ interface MainSceneProps {
 
 export function MainScene({ activeModule }: MainSceneProps) {
   return (
-    <div className="w-full h-full absolute inset-0 pointer-events-auto z-0">
+    <div className="w-full h-full absolute inset-0 pointer-events-none z-0">
       <Canvas dpr={[1, 2]}>
         <PerspectiveCamera makeDefault position={[0, 0, 7]} fov={60} />
         <OrbitControls enablePan={false} enableZoom={true} enableRotate={activeModule !== 'dashboard'} />
@@ -25,7 +25,8 @@ export function MainScene({ activeModule }: MainSceneProps) {
           <Environment preset="night" />
           
           {/* Spatial Transitions based on Module */}
-          {activeModule === 'dashboard' && <IndiaPointCloud position={[0, 0, 0]} />}
+          {/* Keep dashboard background clear behind Evidence Register. */}
+          {activeModule === 'dashboard' && null}
           {activeModule === 'ledger' && <LedgerChain />}
           {activeModule === 'evidence' && <QuantumCentrifuge />}
           
