@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.controllers.evidence_controller import upload_evidence, collect_evidence
+from app.controllers.evidence_controller import upload_evidence, collect_evidence, create_case, list_case_records
 from app.utils.validators import validate_file_presence
 
 evidence_bp = Blueprint('evidence_bp', __name__)
@@ -23,3 +23,15 @@ def handle_collect():
     Triggers automated triage extraction and backend ingestion sync.
     """
     return collect_evidence(request)
+
+
+@evidence_bp.route('/cases', methods=['POST'])
+def handle_create_case():
+    """Creates a case record so evidence can be linked to an existing case number later."""
+    return create_case(request)
+
+
+@evidence_bp.route('/cases', methods=['GET'])
+def handle_list_cases():
+    """Returns registered case numbers and metadata."""
+    return list_case_records(request)

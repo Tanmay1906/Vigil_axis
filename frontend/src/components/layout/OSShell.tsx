@@ -13,7 +13,9 @@ export function OSShell({ children }: OSShellProps) {
   const navigate = useNavigate()
 
   const activeModule = useMemo(() => {
+    if (location.pathname.startsWith('/cases')) return 'cases'
     if (location.pathname.startsWith('/evidence')) return 'evidence'
+    if (location.pathname.startsWith('/audit-trail')) return 'audit'
     if (location.pathname.startsWith('/verification')) return 'verification'
     if (location.pathname.startsWith('/ledger')) return 'ledger'
     return 'dashboard'
@@ -22,7 +24,9 @@ export function OSShell({ children }: OSShellProps) {
   const setActiveModule = (module: string) => {
     const moduleRoute: Record<string, string> = {
       dashboard: '/dashboard',
+      cases: '/cases',
       evidence: '/evidence',
+      audit: '/audit-trail',
       verification: '/verification',
       ledger: '/ledger'
     }
@@ -58,7 +62,7 @@ export function OSShell({ children }: OSShellProps) {
       
       <div className="flex-1 flex flex-col relative z-20 w-full h-full pointer-events-none">
         <div className="pointer-events-auto">
-          <StatusHeader />
+          <StatusHeader activeModule={activeModule} />
         </div>
         
         <main className="flex-1 p-6 lg:p-8 overflow-y-auto pointer-events-auto relative scroll-smooth flex flex-col">

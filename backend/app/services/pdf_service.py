@@ -22,6 +22,7 @@ def generate_certificate(
     investigator: str = "UNKNOWN_INVESTIGATOR",
     collector: str = "UNKNOWN_COLLECTOR",
     submitter: str = "UNKNOWN_SUBMITTER",
+    evidence_id: str | None = None,
 ) -> dict:
     """Generates BSA 2026 compliance PDF from on-chain evidence and anchored tx metadata."""
     chain_record = get_evidence_record(case_id)
@@ -41,18 +42,20 @@ def generate_certificate(
 
     _ensure_report_dir()
     generated_at = datetime.now(timezone.utc)
-    output_path = os.path.join(REPORT_DIR, f"certificate_{case_id}.pdf")
+    suffix = evidence_id if evidence_id else case_id
+    output_path = os.path.join(REPORT_DIR, f"certificate_{suffix}.pdf")
 
     pdf = canvas.Canvas(output_path, pagesize=A4)
     width, height = A4
 
     pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(40, height - 50, "CERTIFICATE UNDER SECTION 63(4) OF BSA 2026")
+    pdf.drawString(40, height - 50, "BSA CHAIN OF CUSTODY CERTIFICATE - SECTION 63(4) BSA 2026")
 
     pdf.setFont("Helvetica", 11)
     y = height - 90
     lines = [
         f"Case ID: {case_id}",
+        f"Evidence ID: {evidence_id or 'N/A'}",
         f"On-Chain TXID: {txid}",
         f"SHA-256 Artifact DNA: {chain_record['file_hash']}",
         f"Block Timestamp (Unix): {block_timestamp}",
@@ -73,6 +76,7 @@ def generate_certificate(
     logger.info("Compliance certificate generated for case_id=%s at %s", case_id, output_path)
     return {
         "case_id": case_id,
+        "evidence_id": evidence_id,
         "txid": txid,
         "hash": chain_record["file_hash"],
         "block_timestamp": block_timestamp,

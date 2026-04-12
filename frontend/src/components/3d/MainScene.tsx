@@ -2,7 +2,6 @@ import { Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera, Environment, ContactShadows } from '@react-three/drei'
 
-import { IndiaPointCloud } from './IndiaPointCloud'
 import { LedgerChain } from './LedgerChain'
 import { QuantumCentrifuge } from './QuantumCentrifuge'
 

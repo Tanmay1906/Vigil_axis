@@ -1,4 +1,6 @@
 import os
+import time
+import threading
 from datetime import datetime
 from typing import Any, Dict, Optional
 from zoneinfo import ZoneInfo
@@ -9,6 +11,8 @@ from app.utils.logger import get_sys_logger
 
 logger = get_sys_logger(__name__)
 IST = ZoneInfo("Asia/Kolkata")
+_schema_ready = False
+_schema_lock = threading.Lock()
 
 
 def _database_url() -> str:
@@ -19,6 +23,14 @@ def _database_url() -> str:
 
 
 def _ensure_schema(conn: psycopg.Connection) -> None:
+    global _schema_ready
+    if _schema_ready:
+        return
+
+    with _schema_lock:
+        if _schema_ready:
+            return
+
     with conn.cursor() as cur:
         cur.execute("CREATE SEQUENCE IF NOT EXISTS case_id_seq START 1;")
 
@@ -68,6 +80,31 @@ def _ensure_schema(conn: psycopg.Connection) -> None:
         )
         cur.execute("CREATE INDEX IF NOT EXISTS idx_evidence_hash_index_file_hash ON evidence_hash_index (file_hash);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_evidence_hash_index_txid ON evidence_hash_index (txid);")
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS ledger_entries (
+                id BIGSERIAL PRIMARY KEY,
+                case_id TEXT NOT NULL,
+                evidence_id TEXT,
+                tx_hash TEXT NOT NULL UNIQUE,
+                block_number BIGINT NOT NULL,
+                block_timestamp BIGINT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+            """
+        )
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_ledger_entries_case_id ON ledger_entries(case_id);")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_ledger_entries_block_number ON ledger_entries(block_number DESC);")
+
+        # Ensure sequence starts from the highest existing case number + 1.
+        cur.execute("SELECT MAX(CAST(substring(case_id FROM '([0-9]+)$') AS INTEGER)) FROM case_table;")
+        result = cur.fetchone()
+        max_case_num = int(result[0]) if result and result[0] is not None else 0
+        next_seq_val = max_case_num + 1
+        cur.execute("SELECT setval('case_id_seq', %s, false);", (next_seq_val,))
+
+    _schema_ready = True
 
 
 def _next_case_id(cur: psycopg.Cursor) -> str:
@@ -149,6 +186,104 @@ def create_case_and_evidence_record(
     }
 
 
+def create_case_record_only(*, investigator: str, case_description: str) -> Dict[str, Any]:
+    """Creates a new case record without evidence; used when investigator pre-registers case."""
+    db_url = _database_url()
+    created_at_ist = datetime.now(IST)
+    placeholder_tx_hash = f"PENDING_CASE_{time.time_ns()}"
+
+    with psycopg.connect(db_url) as conn:
+        _ensure_schema(conn)
+        with conn.cursor() as cur:
+            case_id = _next_case_id(cur)
+            cur.execute(
+                """
+                INSERT INTO case_table (case_id, case_txn_hash, created_at_ist, investigator, description)
+                VALUES (%s, %s, %s, %s, %s);
+                """,
+                (case_id, placeholder_tx_hash, created_at_ist, investigator, case_description),
+            )
+        conn.commit()
+
+    return {
+        "case_id": case_id,
+        "case_txn_hash": placeholder_tx_hash,
+        "created_at_ist": created_at_ist.isoformat(),
+        "investigator": investigator,
+        "description": case_description,
+        "status": "created",
+    }
+
+
+def list_cases(limit: int = 200) -> list[Dict[str, Any]]:
+    """Returns cases from case_table, including those without evidence records."""
+    db_url = _database_url()
+    with psycopg.connect(db_url) as conn:
+        _ensure_schema(conn)
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT case_id, case_txn_hash, created_at_ist, investigator, description
+                FROM case_table
+                ORDER BY created_at_ist DESC
+                LIMIT %s;
+                """,
+                (max(1, limit),),
+            )
+            rows = cur.fetchall()
+
+    return [
+        {
+            "case_id": row[0],
+            "case_txn_hash": row[1],
+            "created_at_ist": row[2].isoformat() if row[2] else None,
+            "investigator": row[3],
+            "description": row[4],
+        }
+        for row in rows
+    ]
+
+
+def find_existing_evidence_by_hash(file_hash: str, *, case_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Returns existing evidence record for the given hash, optionally scoped to a case."""
+    db_url = _database_url()
+    with psycopg.connect(db_url) as conn:
+        _ensure_schema(conn)
+        with conn.cursor() as cur:
+            if case_id:
+                cur.execute(
+                    """
+                    SELECT evidence_id, case_id, uploaded_at_ist
+                    FROM evidence_table
+                    WHERE evidence_hash = %s AND case_id = %s
+                    ORDER BY uploaded_at_ist DESC
+                    LIMIT 1;
+                    """,
+                    (file_hash, case_id),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT evidence_id, case_id, uploaded_at_ist
+                    FROM evidence_table
+                    WHERE evidence_hash = %s
+                    ORDER BY uploaded_at_ist DESC
+                    LIMIT 1;
+                    """,
+                    (file_hash,),
+                )
+            row = cur.fetchone()
+
+    if not row:
+        return None
+
+    return {
+        "evidence_id": row[0],
+        "case_id": row[1],
+        "uploaded_at_ist": row[2].isoformat() if row[2] else None,
+    }
+
+
 def update_case_tx_hash(case_id: str, txid: str) -> None:
     """Updates case txn hash after successful on-chain anchoring."""
     db_url = _database_url()
@@ -160,6 +295,50 @@ def update_case_tx_hash(case_id: str, txid: str) -> None:
                 (txid, case_id),
             )
         conn.commit()
+
+
+def create_evidence_for_case(
+    *,
+    case_id: str,
+    file_hash: str,
+    evidence_collector_name: str,
+    evidence_description: str,
+) -> Dict[str, Any]:
+    """Appends a new evidence entry to an existing case and returns generated evidence_id."""
+    db_url = _database_url()
+    uploaded_at_ist = datetime.now(IST)
+    with psycopg.connect(db_url) as conn:
+        _ensure_schema(conn)
+        with conn.cursor() as cur:
+            evidence_id = _next_evidence_id(cur, case_id)
+            cur.execute(
+                """
+                INSERT INTO evidence_table (
+                    evidence_id,
+                    case_id,
+                    evidence_hash,
+                    uploaded_at_ist,
+                    evidence_collector_name,
+                    description
+                )
+                VALUES (%s, %s, %s, %s, %s, %s);
+                """,
+                (
+                    evidence_id,
+                    case_id,
+                    file_hash,
+                    uploaded_at_ist,
+                    evidence_collector_name,
+                    evidence_description,
+                ),
+            )
+        conn.commit()
+
+    return {
+        "case_id": case_id,
+        "evidence_id": evidence_id,
+        "evidence_uploaded_at_ist": uploaded_at_ist.isoformat(),
+    }
 
 
 def upsert_hash_index(
@@ -264,4 +443,212 @@ def get_hash_index_record(case_id: str) -> Optional[Dict[str, Any]]:
         "file_path": row[8],
         "created_at": row[9].isoformat() if row[9] else None,
         "updated_at": row[10].isoformat() if row[10] else None,
+    }
+
+
+def insert_ledger_entry(*, case_id: str, evidence_id: Optional[str], tx_hash: str, block_number: int, block_timestamp: int) -> None:
+    db_url = _database_url()
+    with psycopg.connect(db_url) as conn:
+        _ensure_schema(conn)
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO ledger_entries (case_id, evidence_id, tx_hash, block_number, block_timestamp)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (tx_hash) DO NOTHING;
+                """,
+                (case_id, evidence_id, tx_hash, block_number, block_timestamp),
+            )
+        conn.commit()
+
+
+def list_ledger_entries(limit: int = 100) -> list[Dict[str, Any]]:
+    db_url = _database_url()
+    with psycopg.connect(db_url) as conn:
+        _ensure_schema(conn)
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT case_id, evidence_id, tx_hash, block_number, block_timestamp
+                FROM ledger_entries
+                ORDER BY block_number DESC
+                LIMIT %s;
+                """,
+                (max(1, limit),),
+            )
+            rows = cur.fetchall()
+
+    return [
+        {
+            "case_id": row[0],
+            "evidence_id": row[1],
+            "tx_hash": row[2],
+            "block_number": int(row[3]),
+            "block_timestamp": int(row[4]),
+        }
+        for row in rows
+    ]
+
+
+def get_dashboard_stats() -> Dict[str, Any]:
+    db_url = _database_url()
+    with psycopg.connect(db_url) as conn:
+        _ensure_schema(conn)
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM case_table;")
+            total_cases = int(cur.fetchone()[0])
+
+            cur.execute("SELECT COUNT(*) FROM evidence_table;")
+            total_evidence = int(cur.fetchone()[0])
+
+            cur.execute("SELECT COUNT(*) FROM case_table WHERE case_txn_hash LIKE 'PENDING_%';")
+            pending_cases = int(cur.fetchone()[0])
+
+            completed_cases = max(0, total_cases - pending_cases)
+
+            cur.execute("SELECT COUNT(*) FROM audit_trail WHERE action = 'CASE_TAMPERED';")
+            tampered_events = int(cur.fetchone()[0])
+
+    if total_evidence == 0:
+        integrity_score = 100
+    else:
+        degraded = min(total_evidence, tampered_events)
+        integrity_score = int(round(((total_evidence - degraded) / total_evidence) * 100))
+
+    return {
+        "pending": pending_cases,
+        "completed": completed_cases,
+        "integrity_score": max(0, min(100, integrity_score)),
+        "total_cases": total_cases,
+        "total_evidence": total_evidence,
+    }
+
+
+def list_case_evidence(limit: int = 100) -> list[Dict[str, Any]]:
+    db_url = _database_url()
+    with psycopg.connect(db_url) as conn:
+        _ensure_schema(conn)
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    e.case_id,
+                    e.evidence_id,
+                    e.evidence_hash,
+                    e.uploaded_at_ist,
+                    le.tx_hash,
+                    c.investigator,
+                    e.evidence_collector_name,
+                    c.description,
+                    e.description
+                FROM evidence_table e
+                JOIN case_table c ON c.case_id = e.case_id
+                LEFT JOIN ledger_entries le ON le.evidence_id = e.evidence_id
+                ORDER BY e.uploaded_at_ist DESC
+                LIMIT %s;
+                """,
+                (max(1, limit),),
+            )
+            rows = cur.fetchall()
+
+    return [
+        {
+            "case_id": row[0],
+            "evidence_id": row[1],
+            "hash": row[2],
+            "uploaded_at_ist": row[3].astimezone(IST).isoformat() if row[3] else None,
+            "tx_hash": row[4],
+            "investigator": row[5],
+            "collector": row[6],
+            "case_description": row[7],
+            "evidence_description": row[8],
+        }
+        for row in rows
+    ]
+
+
+def list_case_evidence_for_case(case_id: str, limit: int = 500) -> list[Dict[str, Any]]:
+    """Returns evidence rows for a specific case ordered by latest upload time."""
+    db_url = _database_url()
+    with psycopg.connect(db_url) as conn:
+        _ensure_schema(conn)
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    e.case_id,
+                    e.evidence_id,
+                    e.evidence_hash,
+                    e.uploaded_at_ist,
+                    le.tx_hash,
+                    c.investigator,
+                    e.evidence_collector_name,
+                    c.description,
+                    e.description
+                FROM evidence_table e
+                JOIN case_table c ON c.case_id = e.case_id
+                LEFT JOIN ledger_entries le ON le.evidence_id = e.evidence_id
+                WHERE e.case_id = %s
+                ORDER BY e.uploaded_at_ist DESC
+                LIMIT %s;
+                """,
+                (case_id, max(1, limit)),
+            )
+            rows = cur.fetchall()
+
+    return [
+        {
+            "case_id": row[0],
+            "evidence_id": row[1],
+            "hash": row[2],
+            "uploaded_at_ist": row[3].astimezone(IST).isoformat() if row[3] else None,
+            "tx_hash": row[4],
+            "investigator": row[5],
+            "collector": row[6],
+            "case_description": row[7],
+            "evidence_description": row[8],
+        }
+        for row in rows
+    ]
+
+
+def get_case_evidence_by_evidence_id(evidence_id: str) -> Optional[Dict[str, Any]]:
+    db_url = _database_url()
+    with psycopg.connect(db_url) as conn:
+        _ensure_schema(conn)
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    e.case_id,
+                    e.evidence_id,
+                    e.evidence_hash,
+                    e.uploaded_at_ist,
+                    le.tx_hash,
+                    c.investigator,
+                    e.evidence_collector_name,
+                    c.description,
+                    e.description
+                FROM evidence_table e
+                JOIN case_table c ON c.case_id = e.case_id
+                LEFT JOIN ledger_entries le ON le.evidence_id = e.evidence_id
+                WHERE e.evidence_id = %s;
+                """,
+                (evidence_id,),
+            )
+            row = cur.fetchone()
+
+    if not row:
+        return None
+
+    return {
+        "case_id": row[0],
+        "evidence_id": row[1],
+        "hash": row[2],
+        "uploaded_at_ist": row[3].astimezone(IST).isoformat() if row[3] else None,
+        "tx_hash": row[4],
+        "investigator": row[5],
+        "collector": row[6],
+        "case_description": row[7],
+        "evidence_description": row[8],
     }

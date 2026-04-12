@@ -32,11 +32,20 @@ def create_app(config_name=None):
     from .routes.verification_routes import verification_bp
     from .routes.report_routes import report_bp
     from .routes.audit_routes import audit_bp
+    from .routes.dashboard_routes import dashboard_bp
     
     app.register_blueprint(evidence_bp, url_prefix='/api/v1/evidence')
     app.register_blueprint(verification_bp, url_prefix='/api/v1/verification')
     app.register_blueprint(report_bp, url_prefix='/api/v1/reports')
     app.register_blueprint(audit_bp, url_prefix='/api/v1/audit')
+    app.register_blueprint(dashboard_bp, url_prefix='/api/v1/dashboard')
+
+    # Aliases for non-versioned API paths used by external clients.
+    app.register_blueprint(evidence_bp, url_prefix='/api/evidence', name='evidence_api_alias')
+    app.register_blueprint(verification_bp, url_prefix='/api/verification', name='verification_api_alias')
+    app.register_blueprint(report_bp, url_prefix='/api/reports', name='report_api_alias')
+    app.register_blueprint(audit_bp, url_prefix='/api/audit', name='audit_api_alias')
+    app.register_blueprint(dashboard_bp, url_prefix='/api/dashboard', name='dashboard_api_alias')
 
     # Basic error handling built globally
     @app.errorhandler(400)

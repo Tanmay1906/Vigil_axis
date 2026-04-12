@@ -9,7 +9,6 @@ interface AuthPayload {
 }
 
 const JWT_COOKIE_NAME = 'vigil-jwt'
-const AUTH_KEY = 'vigil-auth'
 
 export function setAuthToken(payload: AuthPayload): string {
   // In production, this would come from a backend API
@@ -46,4 +45,16 @@ export function clearAuthToken(): void {
 
 export function isAuthenticated(): boolean {
   return !!getAuthToken()
+}
+
+export function getCurrentRole(): UserRole | null {
+  return getAuthPayload()?.role ?? null
+}
+
+export function hasAnyRole(allowedRoles: UserRole[]): boolean {
+  const current = getCurrentRole()
+  if (!current) {
+    return false
+  }
+  return allowedRoles.includes(current)
 }

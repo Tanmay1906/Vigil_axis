@@ -1,35 +1,61 @@
-import { useState, useCallback } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { fetchLedgerEntries } from '../services/api'
 
 export interface BlockchainBlock {
   id: string
   hash: string
   timestamp: number
   metadata: string
-  type: 'RAM_DUMP' | 'BROWSER_HISTORY' | 'FILE_INGEST'
+  type: 'FILE_INGEST'
+  caseId: string
+  evidenceId: string | null
+  blockNumber: number
 }
 
 export function useBlockchain() {
-  const [blocks, setBlocks] = useState<BlockchainBlock[]>([
-    {
-      id: crypto.randomUUID(),
-      hash: '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join(''),
-      timestamp: Date.now() - 3600000,
-      metadata: 'INITIAL_SYSTEM_BOOT_VALIDATION',
-      type: 'RAM_DUMP'
-    }
-  ])
+  const [blocks, setBlocks] = useState<BlockchainBlock[]>([])
+  const [error, setError] = useState<string | null>(null)
 
-  const logToChain = useCallback((type: BlockchainBlock['type'], metadata: string) => {
-    const newBlock: BlockchainBlock = {
-      id: crypto.randomUUID(),
-      hash: '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join(''),
-      timestamp: Date.now(),
-      metadata,
-      type
+  useEffect(() => {
+    let active = true
+
+    const load = async () => {
+      try {
+        const entries = await fetchLedgerEntries(100)
+        if (!active) {
+          return
+        }
+
+        const mapped = entries.map((entry) => ({
+          id: `${entry.tx_hash}-${entry.block_number}`,
+          hash: entry.tx_hash,
+          timestamp: entry.block_timestamp * 1000,
+          metadata: `${entry.case_id}${entry.evidence_id ? ` / ${entry.evidence_id}` : ''}`,
+          type: 'FILE_INGEST' as const,
+          caseId: entry.case_id,
+          evidenceId: entry.evidence_id,
+          blockNumber: entry.block_number,
+        }))
+
+        setBlocks(mapped)
+        setError(null)
+      } catch (loadError) {
+        if (active) {
+          setError(loadError instanceof Error ? loadError.message : 'Failed to fetch ledger')
+        }
+      }
     }
-    setBlocks(prev => [newBlock, ...prev])
-    return newBlock
+
+    load()
+    const interval = window.setInterval(load, 10000)
+
+    return () => {
+      active = false
+      window.clearInterval(interval)
+    }
   }, [])
 
-  return { blocks, logToChain }
+  const latestBlock = useMemo(() => blocks[0] ?? null, [blocks])
+
+  return { blocks, latestBlock, error }
 }

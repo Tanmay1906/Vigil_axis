@@ -4,17 +4,24 @@ import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { ShellLayout } from './components/layout/ShellLayout'
 import { Login } from './components/ui/Login'
 import { Dashboard } from './components/ui/Dashboard'
+import { CaseManagement } from './components/ui/CaseManagement'
 import { EvidenceLab } from './components/ui/EvidenceLab'
+import { AuditTrail } from './components/ui/AuditTrail'
 import { VerificationEngine } from './components/ui/VerificationEngine'
+import { BlockchainLedger } from './components/ui/BlockchainLedger'
+import { getCurrentRole } from './utils/auth'
 
 function App() {
+  const role = getCurrentRole()
+  const homeRoute = role ? '/dashboard' : '/login'
+
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['forensic-investigator', 'forensic-auditor']}>
             <ShellLayout>
               <Dashboard />
             </ShellLayout>
@@ -22,9 +29,19 @@ function App() {
         }
       />
       <Route
+        path="/cases"
+        element={
+          <ProtectedRoute allowedRoles={['forensic-investigator', 'forensic-auditor']}>
+            <ShellLayout>
+              <CaseManagement />
+            </ShellLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/evidence"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['forensic-investigator']}>
             <ShellLayout>
               <EvidenceLab />
             </ShellLayout>
@@ -32,9 +49,19 @@ function App() {
         }
       />
       <Route
+        path="/audit-trail"
+        element={
+          <ProtectedRoute allowedRoles={['forensic-investigator']}>
+            <ShellLayout>
+              <AuditTrail />
+            </ShellLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/verification"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['forensic-auditor']}>
             <ShellLayout>
               <VerificationEngine />
             </ShellLayout>
@@ -44,19 +71,15 @@ function App() {
       <Route
         path="/ledger"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['forensic-auditor']}>
             <ShellLayout>
-              <div className="h-full rounded-3xl border border-cyan-400/20 bg-slate-950/90 p-6 text-slate-100 shadow-[0_18px_50px_-30px_rgba(8,145,178,0.45)]">
-                <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/80">Ledger Module</p>
-                <h2 className="mt-2 text-2xl font-semibold text-white">Blockchain Ledger Visualizer</h2>
-                <p className="mt-2 text-sm text-slate-300">Ledger chain rendering is active in the 3D scene. Use this module to inspect immutable custody records.</p>
-              </div>
+              <BlockchainLedger />
             </ShellLayout>
           </ProtectedRoute>
         }
       />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<Navigate to={homeRoute} replace />} />
+      <Route path="*" element={<Navigate to={homeRoute} replace />} />
     </Routes>
   )
 }

@@ -1,7 +1,7 @@
-import { FormEvent, useState, useRef } from 'react'
+import { ChangeEvent, FormEvent, useState, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { ShieldCheck, UserRound, Upload, Image as ImageIcon } from 'lucide-react'
-import { UserRole } from './Login'
+import { ShieldCheck, UserRound, Image as ImageIcon } from 'lucide-react'
+import { UserRole } from '../../utils/auth'
 
 interface SignupProps {
   onSignup: (payload: { username: string; password: string; role: UserRole; idImage: File }) => void
@@ -18,7 +18,7 @@ export function Signup({ onSignup, onBackToLogin }: SignupProps) {
   const [error, setError] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 

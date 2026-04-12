@@ -1,4 +1,3 @@
-import React from 'react'
 import { useBlockchain, BlockchainBlock } from '../../hooks/useBlockchain'
 
 export function BlockchainLedger() {

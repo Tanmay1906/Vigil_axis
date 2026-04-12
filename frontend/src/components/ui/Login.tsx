@@ -20,14 +20,14 @@ export function Login() {
 			return
 		}
 
-		// Set JWT token and navigate to dashboard
+		// Set auth payload and route to role-specific module.
 		setAuthToken({
 			username: username.trim(),
 			role,
 			timestamp: Date.now()
 		})
 
-		navigate('/dashboard', { replace: true })
+		navigate(role === 'forensic-auditor' ? '/verification' : '/dashboard', { replace: true })
 	}
 
 	return (

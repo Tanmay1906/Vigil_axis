@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from 'react'
+import { useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useVigilStore } from '../../store/useVigilStore'
 import * as THREE from 'three'
@@ -37,7 +37,7 @@ export function QuantumCentrifuge({ position = [0, 0, 0] }: QuantumCentrifugePro
     return [pos, target, init]
   }, [particleCount])
 
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     if (!pointsRef.current) return
     pointsRef.current.rotation.y += delta * (isScanning ? 2 : 0.2)
     pointsRef.current.rotation.x += delta * (isScanning ? 1.5 : 0.1)
