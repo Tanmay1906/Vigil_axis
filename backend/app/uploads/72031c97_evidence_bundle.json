@@ -1,0 +1,43 @@
+{
+    "evidence_id": "evd_20260411213608",
+    "captured_at": "2026-04-11T21:36:08.181866+00:00",
+    "source": "triage_orchestrator",
+    "investigator": "TRIAGE_INVESTIGATOR",
+    "collector": "TRIAGE_COLLECTOR",
+    "submitter": "TRIAGE_SUBMITTER",
+    "artifacts": [
+        {
+            "artifact_type": "chrome_history",
+            "path": "D:\\vigil-axis\\triage-scripts\\extraction_output\\chrome_history_extraction.json",
+            "hash": "f79296d758187c42c7a147e3450b0c2b47d1ceb470af8fbc1bc8e82d8189e618",
+            "metadata": {
+                "file_name": "chrome_history_extraction.json",
+                "file_size_bytes": 26993,
+                "creation_time": "2026-04-03T08:54:49.967030+00:00",
+                "modification_time": "2026-04-11T21:36:07.878507+00:00"
+            }
+        },
+        {
+            "artifact_type": "amcache_execution_history",
+            "path": "D:\\vigil-axis\\triage-scripts\\extraction_output\\amcache_extraction.json",
+            "hash": "916708be0e2e53105796d82539376e178d3ad57247e8cddeca65decdacbf9d38",
+            "metadata": {
+                "file_name": "amcache_extraction.json",
+                "file_size_bytes": 57902,
+                "creation_time": "2026-04-11T21:33:16.725898+00:00",
+                "modification_time": "2026-04-11T21:36:08.177056+00:00"
+            }
+        },
+        {
+            "artifact_type": "chrome_network_predictor",
+            "path": "D:\\vigil-axis\\triage-scripts\\extraction_output\\chrome_predictor_extraction.json",
+            "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "metadata": {
+                "file_name": "chrome_predictor_extraction.json",
+                "file_size_bytes": 2,
+                "creation_time": "2026-04-11T21:33:16.725898+00:00",
+                "modification_time": "2026-04-11T21:36:08.179470+00:00"
+            }
+        }
+    ]
+}

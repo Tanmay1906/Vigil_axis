@@ -2,6 +2,7 @@ import os
 import json
 from web3 import Web3
 from datetime import datetime
+from typing import Any, Dict, Optional
 from app.utils.logger import get_sys_logger
 
 logger = get_sys_logger(__name__)
@@ -54,7 +55,7 @@ def get_contract(w3):
     
     return w3.eth.contract(address=checksum_address, abi=contract_abi)
 
-def log_evidence(case_id: str, file_hash: str, timestamp_iso: str) -> str:
+def log_evidence(case_id: str, file_hash: str, timestamp_iso: str) -> Dict[str, Any]:
     """
     Logs evidence immutably.
     """
@@ -88,9 +89,19 @@ def log_evidence(case_id: str, file_hash: str, timestamp_iso: str) -> str:
             tx_hash = contract.functions.addEvidence(case_id, file_hash, uint_timestamp).transact({'from': sender})
             
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+        block = w3.eth.get_block(receipt.blockNumber)
         receipt_hex = receipt.transactionHash.hex()
-        logger.info(f"Blockchain TX Success: {receipt_hex}")
-        return receipt_hex
+
+        record = {
+            "txid": receipt_hex,
+            "block_number": int(receipt.blockNumber),
+            "block_timestamp": int(block["timestamp"]),
+            "chain_id": int(w3.eth.chain_id),
+            "contract_address": contract.address,
+            "sender": sender,
+        }
+        logger.info("Blockchain TX Success: %s", receipt_hex)
+        return record
         
     except Exception as e:
         logger.error(f"Blockchain transaction failed: {str(e)}")
@@ -109,4 +120,20 @@ def get_evidence_hash(case_id: str) -> str:
     
     except Exception as e:
         logger.error(f"Blockchain retrieval failed: {str(e)}")
+        return None
+
+
+def get_evidence_record(case_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieves the evidence tuple from chain as a structured record."""
+    try:
+        w3 = get_web3_instance()
+        contract = get_contract(w3)
+        result = contract.functions.getEvidence(case_id).call()
+        return {
+            "case_id": result[0],
+            "file_hash": result[1],
+            "timestamp": int(result[2]),
+        }
+    except Exception as e:
+        logger.error("Blockchain record retrieval failed: %s", str(e))
         return None

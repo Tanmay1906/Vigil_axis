@@ -30,6 +30,10 @@ def save_file(uploaded_file) -> str:
     filepath = os.path.join(UPLOAD_FOLDER, unique_name)
     
     try:
+        if hasattr(uploaded_file, 'seek'):
+            uploaded_file.seek(0)
+        elif hasattr(uploaded_file, 'stream') and hasattr(uploaded_file.stream, 'seek'):
+            uploaded_file.stream.seek(0)
         uploaded_file.save(filepath)
         logger.info(f"File physical safely stored mapping successfully at: {filepath}")
         return filepath

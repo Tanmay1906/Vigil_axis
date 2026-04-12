@@ -20,7 +20,6 @@ def handle_upload():
 def handle_collect():
     """
     POST /collect
-    Triggers simulated automated triage extraction.
+    Triggers automated triage extraction and backend ingestion sync.
     """
-    collect_evidence(request)
-    return jsonify({"message": "Triage collection mocked dynamically successfully."}), 200
+    return collect_evidence(request)

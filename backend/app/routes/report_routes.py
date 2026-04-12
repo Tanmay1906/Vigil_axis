@@ -9,4 +9,4 @@ def handle_report(case_id):
     GET /<case_id>
     Extracts explicit case_id from the cleanly structurally URL.
     """
-    return generate_report(case_id)
+    return generate_report(case_id, request=request)

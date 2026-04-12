@@ -6,9 +6,51 @@
     "evidence_id": {
       "type": "string"
     },
-    "details": {
+    "case_id": {
       "type": "string"
+    },
+    "file_hash": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$"
+    },
+    "txid": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "investigator": {
+      "type": "string"
+    },
+    "collector": {
+      "type": "string"
+    },
+    "submitter": {
+      "type": "string"
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "artifact_type": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{64}$"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        },
+        "required": ["artifact_type", "path", "hash", "metadata"]
+      }
     }
   },
-  "required": ["evidence_id"]
+  "required": ["evidence_id", "investigator", "collector", "submitter", "artifacts"]
 }

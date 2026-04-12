@@ -31,10 +31,12 @@ def create_app(config_name=None):
     from .routes.evidence_routes import evidence_bp
     from .routes.verification_routes import verification_bp
     from .routes.report_routes import report_bp
+    from .routes.audit_routes import audit_bp
     
     app.register_blueprint(evidence_bp, url_prefix='/api/v1/evidence')
     app.register_blueprint(verification_bp, url_prefix='/api/v1/verification')
     app.register_blueprint(report_bp, url_prefix='/api/v1/reports')
+    app.register_blueprint(audit_bp, url_prefix='/api/v1/audit')
 
     # Basic error handling built globally
     @app.errorhandler(400)
