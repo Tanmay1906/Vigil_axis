@@ -4,6 +4,18 @@ import { uploadEvidenceFile, UploadEvidenceResponse } from '../services/api'
 
 const HEX_CHARS = "0123456789abcdef"
 
+type ArtifactProfile = {
+  fileName: string
+  fileType: string
+  fileSizeBytes: number
+  createdAt: string
+  createdDay: string
+  cachePath: string
+  cacheState: string
+  memoryPreviewHex: string
+  memoryPreviewSizeBytes: number
+}
+
 function generateRandomHex(length: number) {
   let result = ''
   for (let i = 0; i < length; i++) {
@@ -12,10 +24,20 @@ function generateRandomHex(length: number) {
   return result
 }
 
+function resolveFileType(file: File) {
+  if (file.type) {
+    return file.type
+  }
+
+  const extension = file.name.split('.').pop()?.toLowerCase() || ''
+  return extension || 'unknown'
+}
+
 export function useForensics() {
   const [currentHash, setCurrentHash] = useState<string>('0'.repeat(64))
   const [progress, setProgress] = useState<number>(0)
   const [lastUpload, setLastUpload] = useState<UploadEvidenceResponse | null>(null)
+  const [lastArtifactProfile, setLastArtifactProfile] = useState<ArtifactProfile | null>(null)
   const [error, setError] = useState<string | null>(null)
   const isScanning = useVigilStore(state => state.isScanning)
   const setIsScanning = useVigilStore(state => state.setIsScanning)
@@ -36,6 +58,20 @@ export function useForensics() {
     setProgress(0)
     setError(null)
     addEvent({ type: 'INFO', message: `INITIATING HASH_SEQ for [${file.name}]` })
+
+    const previewBytes = new Uint8Array(await file.slice(0, 64).arrayBuffer())
+    const nowIso = new Date().toISOString()
+    setLastArtifactProfile({
+      fileName: file.name,
+      fileType: resolveFileType(file),
+      fileSizeBytes: file.size,
+      createdAt: nowIso,
+      createdDay: new Date().toLocaleDateString(undefined, { weekday: 'long' }),
+      cachePath: 'browser-session-buffer',
+      cacheState: 'stored_in_memory_until_upload',
+      memoryPreviewHex: Array.from(previewBytes).map((byte) => byte.toString(16).padStart(2, '0')).join(''),
+      memoryPreviewSizeBytes: previewBytes.length,
+    })
 
     let currentProgress = 0
     const interval = window.setInterval(() => {
@@ -74,6 +110,7 @@ export function useForensics() {
     progress,
     isScanning,
     lastUpload,
+    lastArtifactProfile,
     error,
   }
 }

@@ -262,7 +262,7 @@ export function Dashboard() {
               <div className="space-y-3">
                 <div className="flex items-end justify-between">
                   <p className="text-4xl font-semibold text-white">{stats.integrityRate}%</p>
-                  <p className="text-xs text-slate-400">hash success rate</p>
+                  <p className="text-xs text-slate-400">verified evidence coverage</p>
                 </div>
                 <div className="h-3 w-full overflow-hidden rounded-full bg-slate-800">
                   <motion.div

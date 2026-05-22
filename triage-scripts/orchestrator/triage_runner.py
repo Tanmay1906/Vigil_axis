@@ -9,6 +9,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from collectors.chrome_history import extract_chrome_history
 from collectors.amcache_extractor import extract_amcache_history
 from collectors.chrome_predictor import extract_chrome_predictor_intent
+from collectors.ram_capture import extract_ram_snapshot
+from collectors.raw_evidence_profile import extract_raw_evidence_profile
 from processors.hash_generator import generate_file_hash
 from processors.metadata_extractor import extract_metadata
 from utils.file_handler import save_json
@@ -22,11 +24,41 @@ def run_triage():
     
     try:
         # STEP 1: Collection
+        evidence_input_path = os.environ.get("EVIDENCE_FILE_PATH", "").strip()
+        raw_evidence_profile_path = None
+        if evidence_input_path:
+            raw_evidence_profile_path = extract_raw_evidence_profile(
+                evidence_input_path,
+                os.path.join(OUTPUT_DIR, "raw_evidence_profile.json"),
+            )
+        ram_snapshot_path = extract_ram_snapshot(
+            os.path.join(OUTPUT_DIR, "ram_snapshot.json"),
+            evidence_path=evidence_input_path or None,
+        )
+
         chrome_history_path = extract_chrome_history(os.path.join(OUTPUT_DIR, "chrome_history_extraction.json"))
         amcache_path = extract_amcache_history(os.path.join(OUTPUT_DIR, "amcache_extraction.json"))
         chrome_predictor_path = extract_chrome_predictor_intent(os.path.join(OUTPUT_DIR, "chrome_predictor_extraction.json"))
 
         artifacts = [
+            *(
+                [
+                    {
+                        "artifact_type": "raw_evidence_profile",
+                        "path": raw_evidence_profile_path,
+                        "hash": generate_file_hash(raw_evidence_profile_path),
+                        "metadata": extract_metadata(raw_evidence_profile_path),
+                    }
+                ]
+                if raw_evidence_profile_path
+                else []
+            ),
+            {
+                "artifact_type": "ram_snapshot",
+                "path": ram_snapshot_path,
+                "hash": generate_file_hash(ram_snapshot_path),
+                "metadata": extract_metadata(ram_snapshot_path),
+            },
             {
                 "artifact_type": "chrome_history",
                 "path": chrome_history_path,
@@ -62,6 +94,8 @@ def run_triage():
 
         log_info(f"Artifact Bundle Hash Generated: {bundle_hash}")
         log_info(f"Artifact Summary: {json.dumps([a['artifact_type'] for a in artifacts])}")
+        if evidence_input_path:
+            log_info(f"Raw evidence profile generated for: {evidence_input_path}")
 
         # STEP 3: API Pipeline Upload
         log_info("Pushing artifact securely to VIGIL-AXIS backend node...")

@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional
 from zoneinfo import ZoneInfo
 
 import psycopg
+from psycopg.types.json import Json
 
 from app.utils.logger import get_sys_logger
 
@@ -54,10 +55,12 @@ def _ensure_schema(conn: psycopg.Connection) -> None:
                 evidence_hash CHAR(64) NOT NULL,
                 uploaded_at_ist TIMESTAMPTZ NOT NULL,
                 evidence_collector_name TEXT NOT NULL,
-                description TEXT
+                description TEXT,
+                evidence_profile JSONB
             );
             """
         )
+        cur.execute("ALTER TABLE evidence_table ADD COLUMN IF NOT EXISTS evidence_profile JSONB;")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_evidence_case_id ON evidence_table(case_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_evidence_hash ON evidence_table(evidence_hash);")
 
@@ -138,6 +141,7 @@ def create_case_and_evidence_record(
     case_description: str,
     evidence_collector_name: str,
     evidence_description: str,
+    evidence_profile: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Creates a new CASE_### and first evidence record CASE_###_001 with IST timestamps."""
     db_url = _database_url()
@@ -163,9 +167,10 @@ def create_case_and_evidence_record(
                     evidence_hash,
                     uploaded_at_ist,
                     evidence_collector_name,
-                    description
+                    description,
+                    evidence_profile
                 )
-                VALUES (%s, %s, %s, %s, %s, %s);
+                VALUES (%s, %s, %s, %s, %s, %s, %s);
                 """,
                 (
                     evidence_id,
@@ -174,6 +179,7 @@ def create_case_and_evidence_record(
                     created_at_ist,
                     evidence_collector_name,
                     evidence_description,
+                    Json(evidence_profile) if evidence_profile is not None else None,
                 ),
             )
         conn.commit()
@@ -303,6 +309,7 @@ def create_evidence_for_case(
     file_hash: str,
     evidence_collector_name: str,
     evidence_description: str,
+    evidence_profile: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Appends a new evidence entry to an existing case and returns generated evidence_id."""
     db_url = _database_url()
@@ -319,9 +326,10 @@ def create_evidence_for_case(
                     evidence_hash,
                     uploaded_at_ist,
                     evidence_collector_name,
-                    description
+                    description,
+                    evidence_profile
                 )
-                VALUES (%s, %s, %s, %s, %s, %s);
+                VALUES (%s, %s, %s, %s, %s, %s, %s);
                 """,
                 (
                     evidence_id,
@@ -330,6 +338,7 @@ def create_evidence_for_case(
                     uploaded_at_ist,
                     evidence_collector_name,
                     evidence_description,
+                    Json(evidence_profile) if evidence_profile is not None else None,
                 ),
             )
         conn.commit()
@@ -506,14 +515,21 @@ def get_dashboard_stats() -> Dict[str, Any]:
 
             completed_cases = max(0, total_cases - pending_cases)
 
-            cur.execute("SELECT COUNT(*) FROM audit_trail WHERE action = 'CASE_TAMPERED';")
-            tampered_events = int(cur.fetchone()[0])
+            cur.execute(
+                """
+                SELECT COUNT(DISTINCT at.evidence_id)
+                FROM audit_trail at
+                JOIN evidence_table e ON e.evidence_id = at.evidence_id
+                WHERE at.action = 'CASE_VERIFIED' AND at.evidence_id IS NOT NULL;
+                """
+            )
+            verified_evidence = int(cur.fetchone()[0])
 
     if total_evidence == 0:
         integrity_score = 100
     else:
-        degraded = min(total_evidence, tampered_events)
-        integrity_score = int(round(((total_evidence - degraded) / total_evidence) * 100))
+        covered = min(total_evidence, verified_evidence)
+        integrity_score = int(round((covered / total_evidence) * 100))
 
     return {
         "pending": pending_cases,
@@ -540,7 +556,8 @@ def list_case_evidence(limit: int = 100) -> list[Dict[str, Any]]:
                     c.investigator,
                     e.evidence_collector_name,
                     c.description,
-                    e.description
+                    e.description,
+                    e.evidence_profile
                 FROM evidence_table e
                 JOIN case_table c ON c.case_id = e.case_id
                 LEFT JOIN ledger_entries le ON le.evidence_id = e.evidence_id
@@ -562,6 +579,7 @@ def list_case_evidence(limit: int = 100) -> list[Dict[str, Any]]:
             "collector": row[6],
             "case_description": row[7],
             "evidence_description": row[8],
+            "evidence_profile": row[9],
         }
         for row in rows
     ]
@@ -584,7 +602,8 @@ def list_case_evidence_for_case(case_id: str, limit: int = 500) -> list[Dict[str
                     c.investigator,
                     e.evidence_collector_name,
                     c.description,
-                    e.description
+                    e.description,
+                    e.evidence_profile
                 FROM evidence_table e
                 JOIN case_table c ON c.case_id = e.case_id
                 LEFT JOIN ledger_entries le ON le.evidence_id = e.evidence_id
@@ -607,6 +626,7 @@ def list_case_evidence_for_case(case_id: str, limit: int = 500) -> list[Dict[str
             "collector": row[6],
             "case_description": row[7],
             "evidence_description": row[8],
+            "evidence_profile": row[9],
         }
         for row in rows
     ]
@@ -628,7 +648,8 @@ def get_case_evidence_by_evidence_id(evidence_id: str) -> Optional[Dict[str, Any
                     c.investigator,
                     e.evidence_collector_name,
                     c.description,
-                    e.description
+                    e.description,
+                    e.evidence_profile
                 FROM evidence_table e
                 JOIN case_table c ON c.case_id = e.case_id
                 LEFT JOIN ledger_entries le ON le.evidence_id = e.evidence_id
@@ -651,4 +672,5 @@ def get_case_evidence_by_evidence_id(evidence_id: str) -> Optional[Dict[str, Any
         "collector": row[6],
         "case_description": row[7],
         "evidence_description": row[8],
+        "evidence_profile": row[9],
     }

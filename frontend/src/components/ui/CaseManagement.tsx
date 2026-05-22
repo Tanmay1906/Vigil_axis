@@ -21,7 +21,6 @@ export function CaseManagement() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
-
   const [openedCaseId, setOpenedCaseId] = useState<string | null>(null)
   const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(null)
   const [evidenceSource, setEvidenceSource] = useState<VerificationSourceResponse | null>(null)
@@ -29,6 +28,7 @@ export function CaseManagement() {
 
   useEffect(() => {
     let active = true
+
     const load = async () => {
       setLoading(true)
       try {
@@ -73,14 +73,22 @@ export function CaseManagement() {
         if (active) setLoading(false)
       }
     }
+
     load()
-    return () => { active = false }
+    return () => {
+      active = false
+    }
   }, [])
 
   useEffect(() => {
     let active = true
+
     const loadEvidenceSource = async () => {
-      if (!selectedEvidenceId) { setEvidenceSource(null); return }
+      if (!selectedEvidenceId) {
+        setEvidenceSource(null)
+        return
+      }
+
       setEvidenceLoading(true)
       try {
         const payload = await fetchVerificationSourceByEvidence(selectedEvidenceId)
@@ -92,8 +100,11 @@ export function CaseManagement() {
         if (active) setEvidenceLoading(false)
       }
     }
+
     loadEvidenceSource()
-    return () => { active = false }
+    return () => {
+      active = false
+    }
   }, [selectedEvidenceId])
 
   const filteredFolders = useMemo(() => {
@@ -120,18 +131,20 @@ export function CaseManagement() {
 
   const sourceEvidence = useMemo(() => {
     if (!evidenceSource || !selectedEvidenceId) return null
+
     if (Array.isArray(evidenceSource.evidence)) {
       return evidenceSource.evidence.find((e) => e.evidence_id === selectedEvidenceId)
         || evidenceSource.evidence[0]
         || null
     }
+
     return evidenceSource.evidence
   }, [evidenceSource, selectedEvidenceId])
 
   const handleOpenCase = (caseId: string) => {
-    const c = folders.find((f) => f.caseId === caseId)
+    const nextCase = folders.find((f) => f.caseId === caseId)
     setOpenedCaseId(caseId)
-    setSelectedEvidenceId(c?.evidences[0]?.evidence_id || null)
+    setSelectedEvidenceId(nextCase?.evidences[0]?.evidence_id || null)
   }
 
   const handleBack = () => {
@@ -142,13 +155,9 @@ export function CaseManagement() {
 
   return (
     <div className="h-full overflow-y-auto rounded-3xl border border-cyan-400/20 bg-slate-950/90 p-6 text-slate-100 shadow-[0_18px_50px_-30px_rgba(8,145,178,0.45)]">
-
-      {/* ── Header ── */}
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-300/80">
-            Investigator Workspace
-          </p>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-300/80">Investigator Workspace</p>
           <h2 className="mt-2 text-2xl font-semibold text-white">Case Management</h2>
           <p className="mt-1 text-sm text-slate-400">
             {openedCaseId
@@ -161,7 +170,6 @@ export function CaseManagement() {
         </div>
       </div>
 
-      {/* ── Search ── */}
       <div className="mb-4 flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2">
         <Search className="h-4 w-4 shrink-0 text-slate-500" />
         <input
@@ -172,26 +180,21 @@ export function CaseManagement() {
         />
       </div>
 
-      {/* ── Status banners ── */}
       {loading && (
         <div className="mb-4 rounded-xl border border-cyan-500/30 bg-cyan-950/20 px-3 py-2 text-xs text-cyan-200">
           Loading case folders…
         </div>
       )}
+
       {error && (
         <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-950/40 px-3 py-2 text-xs text-rose-200">
           Case API error: {error}
         </div>
       )}
 
-      {/* ══════════════════════════════════════
-          DESKTOP VIEW — folder grid
-      ══════════════════════════════════════ */}
       {!openedCaseId && (
         <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-          <p className="mb-4 text-[11px] uppercase tracking-[0.14em] text-slate-500">
-            Desktop — case folders
-          </p>
+          <p className="mb-4 text-[11px] uppercase tracking-[0.14em] text-slate-500">Desktop — case folders</p>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {filteredFolders.map((folder) => (
@@ -200,11 +203,8 @@ export function CaseManagement() {
                 onClick={() => handleOpenCase(folder.caseId)}
                 className="group rounded-xl border border-transparent p-3 text-left transition-all hover:border-cyan-300/30 hover:bg-white/5"
               >
-                {/* Folder icon */}
                 <div className="relative mx-auto mb-3 h-16 w-[88px]">
-                  {/* Tab */}
                   <div className="absolute left-2 top-1 h-[10px] w-8 rounded-t-md bg-amber-200/90" />
-                  {/* Body */}
                   <div className="absolute inset-x-0 top-[10px] bottom-0 rounded-md border border-amber-300/60 bg-gradient-to-b from-amber-200 to-amber-400 shadow-[0_6px_16px_rgba(251,191,36,.2)] transition-transform group-hover:-translate-y-0.5">
                     <div className="absolute inset-0 flex items-center justify-center">
                       <svg
@@ -220,12 +220,8 @@ export function CaseManagement() {
                   </div>
                 </div>
 
-                <p className="text-center text-[13px] font-medium text-slate-100">
-                  {folder.caseId}
-                </p>
-                <p className="mt-1 text-center text-[11px] text-slate-500">
-                  {folder.evidences.length} evidence
-                </p>
+                <p className="text-center text-[13px] font-medium text-slate-100">{folder.caseId}</p>
+                <p className="mt-1 text-center text-[11px] text-slate-500">{folder.evidences.length} evidence</p>
               </button>
             ))}
           </div>
@@ -238,14 +234,9 @@ export function CaseManagement() {
         </div>
       )}
 
-      {/* ══════════════════════════════════════
-          CASE VIEW — evidence list + detail
-      ══════════════════════════════════════ */}
       {openedCaseId && (
         <div className="space-y-4 min-w-0">
-
-          {/* Breadcrumb */}
-          <div className="flex min-w-0 items-center gap-2 overflow-x-auto text-sm whitespace-nowrap pb-1">
+          <div className="flex min-w-0 items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 text-sm">
             <button
               onClick={handleBack}
               className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-slate-200 transition hover:bg-white/10"
@@ -265,14 +256,9 @@ export function CaseManagement() {
             )}
           </div>
 
-          {/* Two-column layout */}
           <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-12">
-
-            {/* ── Evidence file list ── */}
-            <div className="min-w-0 xl:col-span-4 rounded-2xl border border-white/10 bg-black/25 p-3">
-              <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-slate-500">
-                Evidence files
-              </p>
+            <div className="min-w-0 rounded-2xl border border-white/10 bg-black/25 p-3 xl:col-span-4">
+              <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-slate-500">Evidence files</p>
               <div className="flex max-h-[58vh] flex-col gap-2 overflow-y-auto pr-1">
                 {selectedCase?.evidences.map((evidence) => {
                   const active = evidence.evidence_id === selectedEvidenceId
@@ -294,7 +280,7 @@ export function CaseManagement() {
                         </span>
                         <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
                       </div>
-                      <p className="mt-1 text-[11px] text-slate-500 leading-relaxed">
+                      <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
                         {evidence.evidence_description || 'No evidence description'}
                       </p>
                     </button>
@@ -303,11 +289,8 @@ export function CaseManagement() {
               </div>
             </div>
 
-            {/* ── Evidence detail ── */}
-            <div className="min-w-0 xl:col-span-8 rounded-2xl border border-white/10 bg-black/25 p-4">
-              <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-slate-500">
-                Opened evidence
-              </p>
+            <div className="min-w-0 rounded-2xl border border-white/10 bg-black/25 p-4 xl:col-span-8">
+              <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-slate-500">Opened evidence</p>
 
               {!selectedEvidence && (
                 <div className="rounded-xl border border-white/10 bg-slate-900/50 px-3 py-3 text-xs text-slate-500">
@@ -317,80 +300,116 @@ export function CaseManagement() {
 
               {selectedEvidence && (
                 <div className="space-y-3 min-w-0">
-
-                  {/* Raw metadata */}
                   <div className="rounded-xl border border-white/10 bg-slate-900/60 p-3">
-                    <p className="mb-2 text-[11px] uppercase tracking-[0.1em] text-slate-500">
-                      Raw artifact metadata
-                    </p>
-                    <pre className="max-h-[52vh] overflow-auto whitespace-pre-wrap break-words rounded-lg border border-white/10 bg-black/35 p-3 font-mono text-[11px] leading-relaxed text-slate-300">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[11px] uppercase tracking-[0.1em] text-slate-500">Evidence Overview</p>
+                      <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.08em]">
+                        <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2 py-1 text-cyan-200">
+                          {selectedEvidence.case_id}
+                        </span>
+                        <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-1 text-emerald-200">
+                          {selectedEvidence.tx_hash && !selectedEvidence.tx_hash.startsWith('PENDING_') ? 'Pending' : 'Not Anchored'}
+                        </span>
+                        {evidenceLoading && (
+                          <span className="rounded-full border border-slate-400/20 bg-slate-500/10 px-2 py-1 text-slate-300">
+                            Loading source
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <DetailChip label="Evidence ID" value={selectedEvidence.evidence_id} />
+                      <DetailChip label="Evidence Name" value={selectedEvidence.evidence_description || 'No evidence description'} />
+                      <DetailChip label="Case Description" value={selectedCase?.caseDescription || 'No case description'} />
+                      <DetailChip label="Uploaded At" value={selectedEvidence.uploaded_at_ist || 'Unknown'} />
+                      <DetailChip label="Investigator" value={selectedCase?.investigator || 'No investigator assigned'} />
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-cyan-400/20 bg-cyan-950/20 p-3">
+                    <p className="mb-3 text-[11px] uppercase tracking-[0.1em] text-cyan-300/80">Integrity Snapshot</p>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <DetailChip label="Indexed SHA-256" value={selectedEvidence.hash} mono />
+                      <DetailChip label="Blockchain SHA-256" value={evidenceSource?.source_hash || sourceEvidence?.hash || 'Unavailable'} mono />
+                      <DetailChip label="Transaction ID" value={evidenceSource?.txid || selectedEvidence.tx_hash || 'Unavailable'} mono />
+                      <DetailChip
+                        label="Blockchain Timestamp"
+                        value={
+                          evidenceSource?.block_timestamp
+                            ? new Date(Number(evidenceSource.block_timestamp) * 1000).toLocaleString()
+                            : sourceEvidence?.uploaded_at_ist
+                              ? new Date(sourceEvidence.uploaded_at_ist).toLocaleString()
+                              : selectedEvidence.uploaded_at_ist
+                                ? new Date(selectedEvidence.uploaded_at_ist).toLocaleString()
+                                : 'Not yet confirmed on blockchain'
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-slate-900/60 p-3">
+                    <p className="mb-2 text-[11px] uppercase tracking-[0.1em] text-slate-500">Stored Evidence Profile</p>
+
+                    {selectedEvidence.evidence_profile ? (
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <DetailChip label="File Type" value={selectedEvidence.evidence_profile.file_type || 'unknown'} />
+                        <DetailChip
+                          label="File Size"
+                          value={selectedEvidence.evidence_profile.file_size_bytes?.toLocaleString() ? `${selectedEvidence.evidence_profile.file_size_bytes.toLocaleString()} bytes` : 'unknown'}
+                        />
+                        <DetailChip label="Created Day" value={selectedEvidence.evidence_profile.created_day || 'unknown'} />
+                        <DetailChip label="Created At" value={selectedEvidence.evidence_profile.created_at || 'unknown'} />
+                        <DetailChip label="Cache State" value={selectedEvidence.evidence_profile.cache_state || 'unknown'} />
+                        <DetailChip label="Cache Path" value={selectedEvidence.evidence_profile.cache_path || 'unknown'} />
+                        <div className="rounded-lg border border-white/10 bg-black/30 p-3 md:col-span-2">
+                          <p className="mb-2 text-[10px] uppercase tracking-[0.1em] text-slate-500">Memory Preview</p>
+                          <div className="max-h-24 overflow-auto break-all rounded-md border border-white/10 bg-black/40 px-3 py-2 font-mono text-[11px] leading-relaxed text-cyan-100">
+                            {selectedEvidence.evidence_profile.memory_preview_hex || 'Unavailable'}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-white/10 bg-black/30 p-3 text-xs text-slate-400">
+                        No stored profile is attached to this evidence record yet.
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+                    <p className="mb-2 text-[11px] uppercase tracking-[0.1em] text-slate-500">Raw Payload</p>
+                    <pre className="max-h-[28vh] overflow-auto whitespace-pre-wrap break-words rounded-lg border border-white/10 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-slate-300">
 {JSON.stringify(
   {
     case_id: selectedEvidence.case_id,
-    case_description: selectedCase?.caseDescription || null,
     evidence_id: selectedEvidence.evidence_id,
-    evidence_name: selectedEvidence.evidence_description || null,
-    evidence_hash_indexed: selectedEvidence.hash,
-    evidence_hash_blockchain: evidenceSource?.source_hash || sourceEvidence?.hash || null,
-    evidence_txid: evidenceSource?.txid || selectedEvidence.tx_hash || null,
-    evidence_status: (selectedEvidence.tx_hash && !selectedEvidence.tx_hash.startsWith('PENDING_')) ? 'verified' : 'pending',
-    investigator: selectedEvidence.investigator,
-    collector: selectedEvidence.collector,
-    source_actor: sourceEvidence?.collector || sourceEvidence?.investigator || null,
-    uploaded_at_ist: selectedEvidence.uploaded_at_ist,
-    blockchain_timestamp: evidenceSource?.block_timestamp || null,
-    blockchain_case_id: evidenceSource?.case_id || null,
+    chain_anchor_status: (selectedEvidence.tx_hash && !selectedEvidence.tx_hash.startsWith('PENDING_')) ? 'anchored' : 'not_anchored',
+    verification_status: (selectedEvidence.tx_hash && !selectedEvidence.tx_hash.startsWith('PENDING_')) ? 'pending' : 'not_anchored',
     source_payload_available: !!evidenceSource,
+    evidence_profile: selectedEvidence.evidence_profile || sourceEvidence?.evidence_profile || null,
   },
   null,
   2,
 )}
                     </pre>
                   </div>
-
-                  {/* Hash values */}
-                  <div className="rounded-xl border border-cyan-400/20 bg-cyan-950/20 p-3">
-                    <p className="mb-3 text-[11px] uppercase tracking-[0.1em] text-cyan-300/80">
-                      Hash values
-                    </p>
-                    <div className="space-y-3 min-w-0 font-mono text-xs">
-
-                      <div>
-                        <p className="mb-1.5 text-cyan-300/70">Indexed SHA-256</p>
-                        <div className="overflow-x-auto rounded-lg border border-cyan-400/20 bg-black/30 px-3 py-2 text-cyan-100">
-                          <span className="whitespace-pre-wrap break-all">{selectedEvidence.hash}</span>
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="mb-1.5 text-cyan-300/70">Blockchain source hash</p>
-                        <div className="overflow-x-auto rounded-lg border border-cyan-400/20 bg-black/30 px-3 py-2 text-cyan-100">
-                          <span className="whitespace-pre-wrap break-all">
-                            {evidenceLoading
-                              ? 'Loading source hash…'
-                              : evidenceSource?.source_hash || sourceEvidence?.hash || 'Unavailable'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="mb-1.5 text-cyan-300/70">Transaction ID</p>
-                        <div className="overflow-x-auto rounded-lg border border-cyan-400/20 bg-black/30 px-3 py-2 text-cyan-100">
-                          <span className="whitespace-pre-wrap break-all">
-                            {evidenceSource?.txid || selectedEvidence.tx_hash || 'Unavailable'}
-                          </span>
-                        </div>
-                      </div>
-
-                    </div>
-                  </div>
-
                 </div>
               )}
             </div>
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function DetailChip({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-black/25 p-3">
+      <p className="mb-1 text-[10px] uppercase tracking-[0.08em] text-slate-500">{label}</p>
+      <div className={mono ? 'break-all font-mono text-[12px] leading-relaxed text-cyan-100' : 'break-words text-[12px] leading-relaxed text-slate-100'}>
+        {value}
+      </div>
     </div>
   )
 }

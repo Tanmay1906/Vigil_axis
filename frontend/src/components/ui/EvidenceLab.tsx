@@ -5,7 +5,7 @@ import { UploadCloud, Terminal } from 'lucide-react'
 import { fetchCaseRecords, type CaseRecord } from '../../services/api'
 
 export function EvidenceLab() {
-  const { ingestEvidence, currentHash, progress, isScanning, lastUpload, error } = useForensics()
+  const { ingestEvidence, currentHash, progress, isScanning, lastUpload, lastArtifactProfile, error } = useForensics()
   const [dragActive, setDragActive] = useState(false)
   const [fileName, setFileName] = useState<string>('')
   const [investigatorName, setInvestigatorName] = useState('')
@@ -47,26 +47,41 @@ export function EvidenceLab() {
   }, [])
 
   const processFile = async (file: File) => {
-    setFileName(file.name)
-    setForensicEvidenceName(file.name)
     setDetailsSaved(false)
     setDetailsError('')
     setDuplicateAlert(null)
 
+    if (!investigatorName.trim()) {
+      setDetailsError('Enter investigator name before uploading.')
+      return
+    }
+    if (caseMode === 'existing' && !selectedCaseId) {
+      setDetailsError('Select an existing case number before upload, or switch to Create New Case.')
+      return
+    }
+    if (caseMode === 'new' && !newCaseDescription.trim()) {
+      setDetailsError('Provide a new case description before upload.')
+      return
+    }
+
+    const evidenceLabel = forensicEvidenceName.trim() || file.name
+    setFileName(file.name)
+    setForensicEvidenceName(evidenceLabel)
+
     try {
-      await ingestEvidence(file, {
+      const upload = await ingestEvidence(file, {
         collectorId: investigatorName || undefined,
         investigator: investigatorName || undefined,
         caseId: caseMode === 'existing' ? selectedCaseId || undefined : undefined,
-        caseDescription: caseMode === 'new' ? newCaseDescription || undefined : undefined,
-        evidenceDescription: forensicEvidenceName || file.name,
+        caseDescription: caseMode === 'new' ? newCaseDescription.trim() || undefined : undefined,
+        evidenceDescription: evidenceLabel,
       })
       setDetailsSaved(true)
       const rows = await fetchCaseRecords(300)
       setCaseRecords(rows)
-      if (caseMode === 'new' && rows.length > 0) {
+      if (caseMode === 'new' && upload.case_id) {
         setCaseMode('existing')
-        setSelectedCaseId(rows[0].case_id)
+        setSelectedCaseId(upload.case_id)
       }
     } catch (uploadError) {
       setDetailsSaved(false)
@@ -346,9 +361,25 @@ export function EvidenceLab() {
             </div>
           )}
 
+          {lastArtifactProfile && (
+            <div className="mb-3 rounded-xl border border-cyan-400/20 bg-cyan-950/30 p-3 text-xs font-mono text-cyan-100 space-y-1">
+              <div className="mb-2 text-[10px] uppercase tracking-[0.14em] text-cyan-300/80">Raw Evidence Profile</div>
+              <div>FILE: {lastArtifactProfile.fileName}</div>
+              <div>TYPE: {lastArtifactProfile.fileType}</div>
+              <div>SIZE: {lastArtifactProfile.fileSizeBytes.toLocaleString()} bytes</div>
+              <div>CREATED: {lastArtifactProfile.createdAt}</div>
+              <div>DAY CREATED: {lastArtifactProfile.createdDay}</div>
+              <div>CACHE: {lastArtifactProfile.cachePath}</div>
+              <div>STATE: {lastArtifactProfile.cacheState}</div>
+              <div>MEMORY PREVIEW BYTES: {lastArtifactProfile.memoryPreviewSizeBytes}</div>
+              <div className="break-all text-[10px] text-cyan-200/70">MEMORY PREVIEW HEX: {lastArtifactProfile.memoryPreviewHex || '00'}</div>
+            </div>
+          )}
+
           {!lastUpload && (
             <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-slate-400">
               Upload any file type (pdf, jpg, jpeg, png, doc, zip, etc.) and link it to a case number.
+              The frontend now captures file type, size, created day, and an in-memory preview.
             </div>
           )}
 
@@ -358,6 +389,14 @@ export function EvidenceLab() {
               <div>EVIDENCE ID: {lastUpload.evidence_id}</div>
               <div>TXID: {lastUpload.txid ?? 'UNAVAILABLE'}</div>
               <div>BLOCK: {lastUpload.block_number ?? 'UNAVAILABLE'}</div>
+              {lastUpload.evidence_profile && (
+                <>
+                  <div className="pt-1 text-cyan-300/80">STORED PROFILE</div>
+                  <div>TYPE: {lastUpload.evidence_profile.file_type || 'unknown'}</div>
+                  <div>SIZE: {lastUpload.evidence_profile.file_size_bytes?.toLocaleString() || 'unknown'} bytes</div>
+                  <div>DAY CREATED: {lastUpload.evidence_profile.created_day || 'unknown'}</div>
+                </>
+              )}
             </div>
           )}
         </div>

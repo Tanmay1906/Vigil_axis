@@ -23,6 +23,31 @@ from app.services.audit_service import log_audit_event
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 TRIAGE_RUNNER_PATH = os.path.join(os.path.dirname(BASE_DIR), "triage-scripts", "orchestrator", "triage_runner.py")
 
+
+def _build_evidence_profile(*, uploaded_file, file_path: str) -> dict:
+    if hasattr(uploaded_file, 'stream') and hasattr(uploaded_file.stream, 'seek'):
+        uploaded_file.stream.seek(0)
+    preview = uploaded_file.stream.read(64) if hasattr(uploaded_file, 'stream') else b''
+    if hasattr(uploaded_file, 'stream') and hasattr(uploaded_file.stream, 'seek'):
+        uploaded_file.stream.seek(0)
+
+    created_at = datetime.now(timezone.utc)
+    file_size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
+    file_name = uploaded_file.filename or os.path.basename(file_path)
+    file_extension = os.path.splitext(file_name)[1].lstrip('.').lower()
+
+    return {
+        'file_name': file_name,
+        'file_type': uploaded_file.mimetype or file_extension or 'unknown',
+        'file_size_bytes': file_size,
+        'created_at': created_at.isoformat(),
+        'created_day': created_at.strftime('%A'),
+        'cache_path': file_path,
+        'cache_state': 'stored_on_disk',
+        'memory_preview_hex': preview.hex(),
+        'memory_preview_size_bytes': len(preview),
+    }
+
 def upload_evidence(request):
     """
     Orchestrates the secure ingestion, storage, hashing, and blockchain logging
@@ -42,7 +67,7 @@ def upload_evidence(request):
         submitter = request.form.get("submitter", "UNKNOWN_SUBMITTER")
         case_description = request.form.get("case_description", "")
         evidence_description = request.form.get("evidence_description", "")
-        existing_case_id = request.form.get("case_id")
+        existing_case_id = (request.form.get("case_id") or "").strip() or None
         
         # 2. Atomic hash pipeline: hash first, rewind, then persist to disk.
         file_hash = generate_hash(uploaded_file)
@@ -62,6 +87,7 @@ def upload_evidence(request):
             }), 409
 
         file_path = save_file(uploaded_file)
+        evidence_profile = _build_evidence_profile(uploaded_file=uploaded_file, file_path=file_path)
         if existing_case_id:
             case_id = existing_case_id
             registry_record = create_evidence_for_case(
@@ -69,6 +95,7 @@ def upload_evidence(request):
                 file_hash=file_hash,
                 evidence_collector_name=collector_id,
                 evidence_description=evidence_description,
+                evidence_profile=evidence_profile,
             )
         else:
             # Create deterministic ascending CASE_### and first evidence record.
@@ -80,6 +107,7 @@ def upload_evidence(request):
                 case_description=case_description,
                 evidence_collector_name=collector_id,
                 evidence_description=evidence_description,
+                evidence_profile=evidence_profile,
             )
             case_id = registry_record["case_id"]
             log_audit_event(
@@ -159,6 +187,7 @@ def upload_evidence(request):
             "submitter": submitter,
             "case_description": case_description,
             "evidence_description": evidence_description,
+            "evidence_profile": evidence_profile,
             "status": "stored"
         }), 200
 

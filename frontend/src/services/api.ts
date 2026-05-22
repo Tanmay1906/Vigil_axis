@@ -29,6 +29,17 @@ export interface CaseEvidence {
   collector: string | null
   case_description: string | null
   evidence_description: string | null
+  evidence_profile?: {
+    file_name?: string
+    file_type?: string
+    file_size_bytes?: number
+    created_at?: string
+    created_day?: string
+    cache_path?: string
+    cache_state?: string
+    memory_preview_hex?: string
+    memory_preview_size_bytes?: number
+  } | null
 }
 
 export interface VerificationSourceResponse {
@@ -48,6 +59,7 @@ export interface UploadEvidenceResponse {
   txid: string | null
   block_number: number | null
   block_timestamp: number | null
+  evidence_profile?: CaseEvidence['evidence_profile']
 }
 
 export interface CaseRecord {
