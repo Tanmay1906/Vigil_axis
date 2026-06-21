@@ -34,18 +34,19 @@ try:
         conn.close()
         exit(0)
     
-    print(f"Found {len(tables)} table(s) to drop:")
+    print(f"Found {len(tables)} table(s) to truncate:")
     for (table,) in tables:
         print(f"  - {table}")
     
-    # Drop all tables
-    cursor.execute("DROP TABLE IF EXISTS case_evidence, audit_log CASCADE")
+    # Truncate all tables (keeps schema, clears data)
+    for (table,) in tables:
+        cursor.execute(f"TRUNCATE TABLE {table} CASCADE")
     conn.commit()
-    print("✓ All tables dropped successfully")
+    print("✓ All tables truncated successfully (data cleared, schema preserved)")
     
     cursor.close()
     conn.close()
-    print("✓ Database cleared. Run 'python run.py' to recreate the schema.")
+    print("✓ Database cleared. Schema preserved. Run 'python run.py' to start fresh with new data.")
     
 except Exception as e:
     print(f"ERROR: {e}")
